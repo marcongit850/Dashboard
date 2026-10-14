@@ -21,23 +21,24 @@ function addPost(
   posts: Post[],
   at: Date | null,
   botId: string,
-  source: string,
+  site: string,
   platform: string,
   topic: string,
   url: string,
+  notes = "",
 ) {
   if (!at) return;
   posts.push({
     at,
     botId,
-    source,
-    site: source,
+    source: "Posts",
+    site,
     platform,
     account: "",
     status: "posted",
     topic,
     url,
-    notes: "",
+    notes,
   });
 }
 
@@ -51,16 +52,16 @@ export function buildDemoRaw(now: Date): RawData {
   addPost(posts, onWeekday(now, 0, 9, 0), "walton", "Walton County Updates", "Facebook", "Pier opening hours", "https://example.com/posts/pier");
   addPost(posts, onWeekday(now, 0, 11, 0), "foody", "Food Guides", "Instagram", "Shrimp basket guide", "https://example.com/posts/shrimp");
   addPost(posts, onWeekday(now, 0, 15, 0), "tango", "Seaclusion", "Instagram", "Sunset from the dune", "https://example.com/posts/sunset");
-  addPost(posts, onWeekday(now, 0, 18, 0), "savenello-marketing", "Savenello Organic", "Instagram", "30A in one minute", "https://example.com/posts/minute");
+  addPost(posts, onWeekday(now, 0, 18, 0), "savenello-marketing", "Savenello", "Instagram", "30A in one minute", "https://example.com/posts/minute");
   addPost(posts, onWeekday(now, 1, 9, 30), "walton", "Walton County Updates", "Facebook", "Rip current note", "https://example.com/posts/rip");
   addPost(posts, onWeekday(now, 1, 10, 30), "foody", "Food Guides", "Instagram", "Grouper sandwich", "https://example.com/posts/grouper");
   addPost(posts, onWeekday(now, 1, 12, 0), "tango", "Seaclusion", "TikTok", "Farmers market reel", "https://example.com/posts/market");
   addPost(posts, onWeekday(now, 1, 13, 30), "outreach", "Friends of Scenic 30A", "Email", "Newsletter subject lines", "https://example.com/posts/subjects");
-  addPost(posts, onWeekday(now, 1, 15, 0), "savenello-marketing", "Savenello Organic", "Instagram", "Cabin weeknight offer", "https://example.com/posts/cabin");
+  addPost(posts, onWeekday(now, 1, 15, 0), "savenello-marketing", "Savenello", "Instagram", "Cabin weeknight offer", "https://example.com/posts/cabin");
   addPost(posts, onWeekday(now, 1, 17, 0), "walton", "Walton County Updates", "Facebook", "Parking reminder", "https://example.com/posts/parking");
   addPost(posts, ago(now, 4), "outreach", "Friends of Scenic 30A", "Email", "Comment replies queued", "https://example.com/posts/replies");
-  addPost(posts, ago(now, 1.2), "savenello-marketing", "Savenello Organic", "Instagram", "Morning light on 30A", "https://example.com/posts/light");
-  addPost(posts, ago(now, 0.6), "walton", "Walton County Updates", "Facebook", "Beach flags are up", "https://example.com/posts/flags");
+  addPost(posts, ago(now, 1.2), "savenello-marketing", "Savenello", "Instagram", "Morning light on 30A", "https://example.com/posts/light", "Reach 840, clicks 22, signups 4");
+  addPost(posts, ago(now, 0.6), "walton", "Walton County Updates", "Facebook", "Beach flags are up", "https://example.com/posts/flags", "Reach 120, clicks 6, signups 0");
 
   const statuses: StatusRow[] = [
     status(ago(now, 50), "chief", "finished", "Ship the Monday note", false, "https://example.com/status/monday"),

@@ -44,7 +44,17 @@ function blank(row: string[]): boolean {
   return row.every((cell) => cell.trim() === "");
 }
 
-export function parsePostLog(csv: string, source: string): { posts: Post[]; notes: string[] } {
+function metricNotes(row: string[], headers: Map<string, number>): string {
+  const extra = [
+    col(row, headers, "reach") ? `Reach ${col(row, headers, "reach")}` : "",
+    col(row, headers, "clicks") ? `clicks ${col(row, headers, "clicks")}` : "",
+    col(row, headers, "signups") ? `signups ${col(row, headers, "signups")}` : "",
+    col(row, headers, "notes"),
+  ].filter(Boolean);
+  return clip(extra.join(", "));
+}
+
+export function parsePostLog(csv: string, source = "Posts"): { posts: Post[]; notes: string[] } {
   const notes: string[] = [];
   const { headers, rows } = table(csv);
   if (rows.length === 0 && headers.size === 0) return { posts: [], notes };
@@ -75,57 +85,15 @@ export function parsePostLog(csv: string, source: string): { posts: Post[]; note
       source,
       site: clip(col(row, headers, "site"), 120),
       platform: clip(col(row, headers, "platform"), 80),
-      account: clip(col(row, headers, "account_or_group"), 120),
+      account: clip(col(row, headers, "account"), 120),
       status: clip(status, 40),
       topic: clip(col(row, headers, "topic")),
       url: col(row, headers, "post_url"),
-      notes: clip(col(row, headers, "notes")),
+      notes: metricNotes(row, headers),
     });
   }
   if (badTime) notes.push(unreadableTimes(source));
   for (const name of [...unknown].slice(0, 8)) notes.push(unknownBot(name, source));
-  return { posts, notes };
-}
-
-export function parseSavenello(csv: string, source = "Savenello Organic"): { posts: Post[]; notes: string[] } {
-  const notes: string[] = [];
-  const { headers, rows } = table(csv);
-  if (rows.length === 0 && headers.size === 0) return { posts: [], notes };
-  if (!headers.has("date")) return { posts: [], notes: [missingColumn(source, "Date")] };
-  const posts: Post[] = [];
-  let badTime = false;
-  for (const row of rows) {
-    if (blank(row)) continue;
-    const status = col(row, headers, "status");
-    if (!countsAsPosted(status)) continue;
-    const at = parseTimestamp(col(row, headers, "date"));
-    if (!at) {
-      badTime = true;
-      continue;
-    }
-    const content = clip(col(row, headers, "content type"), 80);
-    const hook = clip(col(row, headers, "topic/hook"));
-    const topic = content && hook ? `${content}: ${hook}` : hook || content;
-    const extra = [
-      col(row, headers, "reach/views") ? `Reach ${col(row, headers, "reach/views")}` : "",
-      col(row, headers, "clicks") ? `clicks ${col(row, headers, "clicks")}` : "",
-      col(row, headers, "signups") ? `signups ${col(row, headers, "signups")}` : "",
-      col(row, headers, "notes"),
-    ].filter(Boolean);
-    posts.push({
-      at,
-      botId: "savenello-marketing",
-      source,
-      site: source,
-      platform: clip(col(row, headers, "channel/platform"), 80),
-      account: clip(col(row, headers, "account"), 120),
-      status: clip(status, 40),
-      topic,
-      url: col(row, headers, "link"),
-      notes: clip(extra.join(", ")),
-    });
-  }
-  if (badTime) notes.push(unreadableTimes(source));
   return { posts, notes };
 }
 
@@ -173,25 +141,4 @@ export function parseStatus(csv: string, source = "Status sheet"): { rows: Statu
   if (badTime) notes.push(unreadableTimes(source));
   for (const name of [...unknown].slice(0, 8)) notes.push(unknownBot(name, source));
   return { rows: parsed, notes };
-}
-
-export function parsePostLogSources(raw: string): { sources: { name: string; url: string }[]; error: string | null } {
-  const trimmed = raw.trim();
-  if (!trimmed) return { sources: [], error: null };
-  try {
-    const value = JSON.parse(trimmed) as unknown;
-    if (!Array.isArray(value)) return { sources: [], error: "POSTLOG_CSV_URLS must be a JSON array." };
-    const sources: { name: string; url: string }[] = [];
-    for (const item of value) {
-      if (!item || typeof item !== "object") continue;
-      const record = item as { name?: unknown; url?: unknown };
-      const name = typeof record.name === "string" ? record.name.trim() : "";
-      const url = typeof record.url === "string" ? record.url.trim() : "";
-      if (!name && !url) continue;
-      sources.push({ name: name || "Post log", url });
-    }
-    return { sources, error: null };
-  } catch {
-    return { sources: [], error: "POSTLOG_CSV_URLS is not valid JSON." };
-  }
 }

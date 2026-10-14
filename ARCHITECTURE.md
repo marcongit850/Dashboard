@@ -18,22 +18,25 @@ Cloudflare Access can sit in front of the hostname later. Until `ACCESS_AUD` and
 
 All sheet URLs are plain vars in `wrangler.jsonc`. Leave them blank until the published CSV links are ready. A blank var, bad JSON, or a failed fetch renders an empty state. The page still loads.
 
+Every bot logs in one workbook, Team HQ Log. Two tabs, two CSV links:
+
 | Var | What it is |
 | --- | --- |
-| `POSTLOG_CSV_URLS` | JSON array of `{ "name", "url" }` for the Team Social Post Log tabs: Walton County Updates, Food Guides, Seaclusion, Friends of Scenic 30A. Columns: `posted_at_ct`, `bot`, `site`, `platform`, `account_or_group`, `status`, `topic`, `post_url`, `notes`. |
-| `SAVENELLO_CSV_URL` | Savenello Marketing Log, Organic tab. Columns: Date, Channel/Platform, Account, Content type, Topic/Hook, Link, Status, Reach/Views, Clicks, Signups, Notes. Every row belongs to Savenello Marketing. |
-| `STATUS_CSV_URL` | Team HQ status sheet. Columns: `timestamp_ct`, `bot`, `state`, `task`, `link`, `needs_marc`. `state` is `started`, `finished`, `blocked`, or `idle`. `needs_marc` is `yes` or `no`. The latest row for each bot is the current task. |
+| `POSTS_CSV_URL` | Posts tab. Columns: `posted_at_ct`, `bot`, `site`, `platform`, `account`, `status`, `topic`, `post_url`, `reach`, `clicks`, `signups`, `notes`. The bot comes from the `bot` column. Reach, clicks, and signups are kept with the row notes. |
+| `STATUS_CSV_URL` | Status tab. Columns: `timestamp_ct`, `bot`, `state`, `task`, `link`, `needs_marc`. `state` is `started`, `finished`, `blocked`, or `idle`. `needs_marc` is `yes` or `no`. The latest row for each bot is the current task. |
 | `BOT_REPO_MAP` | JSON object of repo name to bot name. |
 | `ACCESS_AUD` | Cloudflare Access application AUD tag. |
 | `ACCESS_TEAM_DOMAIN` | Team issuer, for example `https://your-team.cloudflareaccess.com`. |
 
-Example post log value (one string):
+Example posts tab value (one string, the published CSV for that tab):
 
-```json
-[{"name":"Walton County Updates","url":"https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv&gid=GID"}]
+```text
+https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv&gid=POSTS_GID
 ```
 
-The bot column is matched to the fixed roster without case sensitivity. Display names: Chief, Bob (Bob The Builder), money-man, Walton, Foody (Foody & Friends), Tango, Tik-Toker, Rank, Outreach, Scout, Warden, Savenello Marketing, Personal Assistant. Bot pages are `/bot/:slug`.
+Use the status tab gid for `STATUS_CSV_URL`. Both links point at the same Team HQ Log workbook.
+
+The bot column on both tabs is matched to the fixed roster without case sensitivity. Display names: Chief, Bob (Bob The Builder), money-man, Walton, Foody (Foody & Friends), Tango, Tik-Toker, Rank, Outreach, Scout, Warden, Savenello Marketing, Personal Assistant. Bot pages are `/bot/:slug`.
 
 GitHub reads `marcongit850` with a few cached calls: one GraphQL query for the 12 most recently pushed repos (merged PRs, open PRs, recent commits) and one search for open PRs. Attribution:
 
@@ -91,7 +94,7 @@ Open `http://127.0.0.1:8787/?demo=1` for sample data. Put `GITHUB_TOKEN=...` in 
 - Set both Access vars or neither. If only one is set, the Worker returns 403.
 - `ACCESS_TEAM_DOMAIN` should be the team origin. Certs are read from `{origin}/cdn-cgi/access/certs`. The request must include `Cf-Access-Jwt-Assertion`.
 - `workers.dev` is public until Access is turned on. The in-Worker check is the second lock, not a replacement for Access.
-- `POSTLOG_CSV_URLS` and `BOT_REPO_MAP` are JSON stored in string vars. Invalid JSON is an empty state, not a crash.
+- `POSTS_CSV_URL` and `STATUS_CSV_URL` are single https CSV links. `BOT_REPO_MAP` is JSON stored in a string var. Invalid JSON is an empty state, not a crash.
 - Keyword rules beat the repo map. A security PR on a savenello repo is Warden.
 - The map and the `savenello` / `money` prefix do not look at words inside other words. `ranking` does not go to Rank. `seo-titles` does.
 - Google must return CSV to an anonymous HTTPS GET. A private sheet that only you can open will fail and show an empty state.

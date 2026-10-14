@@ -94,7 +94,7 @@ describe("dash-free copy", () => {
       statuses: [],
       pulls: [],
       commits: [],
-      notes: [COPY.postLogOff, COPY.savenelloOff, COPY.statusOff, COPY.githubOff],
+      notes: [COPY.postsOff, COPY.statusOff, COPY.githubOff],
     };
     const page = buildModel(data, NOW, { demo: false, loginEnabled: false });
     const html = renderHome(page);
@@ -104,7 +104,7 @@ describe("dash-free copy", () => {
     expect(html).toContain(COPY.noPosts);
     expect(html).toContain(COPY.nothingWaiting);
     expect(html).toContain(COPY.nothingFinished);
-    expect(html).toContain(COPY.postLogOff);
+    expect(html).toContain(COPY.postsOff);
     expect(html).toContain(COPY.githubOff);
     expect(html.match(/class="desk idle/g)).toHaveLength(13);
     const missing = renderMissing(page, true);
@@ -122,5 +122,9 @@ describe("dash-free copy", () => {
     expect(config).not.toMatch(/custom_domain/);
     expect(config).not.toMatch(/"routes"/);
     expect(config).not.toContain("GITHUB_TOKEN");
+    expect(config).toContain('"POSTS_CSV_URL"');
+    expect(config).toContain('"STATUS_CSV_URL"');
+    expect(config).not.toContain("POSTLOG_CSV_URLS");
+    expect(config).not.toContain("SAVENELLO_CSV_URL");
   });
 });

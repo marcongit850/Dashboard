@@ -17,7 +17,7 @@ function post(at: Date, botId: string, topic: string): Post {
   return {
     at,
     botId,
-    source: "Walton County Updates",
+    source: "Posts",
     site: "Walton County Updates",
     platform: "Facebook",
     account: "",

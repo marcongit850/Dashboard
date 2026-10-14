@@ -9,7 +9,7 @@ import {
   parseSearchBody,
 } from "./github";
 import { fetchText, httpsUrl } from "./http";
-import { parsePostLog, parsePostLogSources, parseSavenello, parseStatus } from "./sheets";
+import { parsePostLog, parseStatus } from "./sheets";
 import type { Commit, Post, Pull, RawData, StatusRow } from "./types";
 
 type SourceResult<T> = { rows: T[]; notes: string[] };
@@ -22,41 +22,15 @@ async function loadCsv(ctx: ExecutionContext, name: string, url: string): Promis
   );
 }
 
-async function loadPostLogs(env: Env, ctx: ExecutionContext): Promise<SourceResult<Post>> {
-  const parsed = parsePostLogSources(env.POSTLOG_CSV_URLS);
-  if (parsed.error) return { rows: [], notes: [parsed.error] };
-  if (!parsed.sources.length) return { rows: [], notes: [COPY.postLogOff] };
-  const batches = await Promise.all(parsed.sources.map(async (source) => {
-    const notes: string[] = [];
-    if (!source.url) {
-      notes.push(httpsOnly(source.name));
-      return { rows: [] as Post[], notes };
-    }
-    if (!httpsUrl(source.url)) {
-      notes.push(httpsOnly(source.name));
-      return { rows: [] as Post[], notes };
-    }
-    const body = await loadCsv(ctx, source.name, source.url);
-    if (body == null) return { rows: [] as Post[], notes: [loadFailed(source.name)] };
-    const sheet = parsePostLog(body, source.name);
-    if (!sheet.posts.length && !sheet.notes.length) notes.push(noRows(source.name));
-    return { rows: sheet.posts, notes: [...sheet.notes, ...notes] };
-  }));
-  return {
-    rows: batches.flatMap((batch) => batch.rows),
-    notes: batches.flatMap((batch) => batch.notes),
-  };
-}
-
-async function loadSavenello(env: Env, ctx: ExecutionContext): Promise<SourceResult<Post>> {
-  const url = env.SAVENELLO_CSV_URL.trim();
-  if (!url) return { rows: [], notes: [COPY.savenelloOff] };
-  if (!httpsUrl(url)) return { rows: [], notes: [httpsOnly("Savenello log")] };
-  const body = await loadCsv(ctx, "Savenello Organic", url);
-  if (body == null) return { rows: [], notes: [loadFailed("Savenello log")] };
-  const sheet = parseSavenello(body);
+async function loadPosts(env: Env, ctx: ExecutionContext): Promise<SourceResult<Post>> {
+  const url = env.POSTS_CSV_URL.trim();
+  if (!url) return { rows: [], notes: [COPY.postsOff] };
+  if (!httpsUrl(url)) return { rows: [], notes: [httpsOnly("Posts sheet")] };
+  const body = await loadCsv(ctx, "Posts sheet", url);
+  if (body == null) return { rows: [], notes: [loadFailed("Posts sheet")] };
+  const sheet = parsePostLog(body);
   const notes = sheet.notes.slice();
-  if (!sheet.posts.length && !notes.length) notes.push(noRows("Savenello log"));
+  if (!sheet.posts.length && !notes.length) notes.push(noRows("Posts sheet"));
   return { rows: sheet.posts, notes };
 }
 
@@ -125,17 +99,16 @@ async function loadGithub(env: Env, ctx: ExecutionContext): Promise<{ pulls: Pul
 }
 
 export async function loadRaw(env: Env, ctx: ExecutionContext): Promise<RawData> {
-  const [posts, savenello, statuses, github] = await Promise.all([
-    loadPostLogs(env, ctx),
-    loadSavenello(env, ctx),
+  const [posts, statuses, github] = await Promise.all([
+    loadPosts(env, ctx),
     loadStatus(env, ctx),
     loadGithub(env, ctx),
   ]);
   return {
-    posts: [...posts.rows, ...savenello.rows],
+    posts: posts.rows,
     statuses: statuses.rows,
     pulls: github.pulls,
     commits: github.commits,
-    notes: [...posts.notes, ...savenello.notes, ...statuses.notes, ...github.notes],
+    notes: [...posts.notes, ...statuses.notes, ...github.notes],
   };
 }

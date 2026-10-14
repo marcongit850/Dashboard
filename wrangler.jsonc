@@ -24,14 +24,10 @@
     "run_worker_first": true
   },
   "vars": {
-    // JSON array of { "name", "url" } for published Google Sheet CSV tabs.
-    // Tabs: Walton County Updates, Food Guides, Seaclusion, Friends of Scenic 30A.
-    // Columns: posted_at_ct, bot, site, platform, account_or_group, status, topic, post_url, notes.
-    "POSTLOG_CSV_URLS": "[]",
-    // Savenello Marketing Log, Organic tab.
-    // Columns: Date, Channel/Platform, Account, Content type, Topic/Hook, Link, Status, Reach/Views, Clicks, Signups, Notes.
-    "SAVENELLO_CSV_URL": "",
-    // Team HQ status sheet.
+    // Team HQ Log workbook, posts tab.
+    // Columns: posted_at_ct, bot, site, platform, account, status, topic, post_url, reach, clicks, signups, notes.
+    "POSTS_CSV_URL": "",
+    // Team HQ Log workbook, status tab.
     // Columns: timestamp_ct, bot, state, task, link, needs_marc.
     // state is started, finished, blocked, or idle. needs_marc is yes or no.
     "STATUS_CSV_URL": "",
