@@ -26,7 +26,7 @@ const HTML: HeadersInit = {
   "content-type": "text/html; charset=utf-8",
   "cache-control": "private, no-store",
   "x-content-type-options": "nosniff",
-  "referrer-policy": "no-referrer",
+  "referrer-policy": "same-origin",
   "content-security-policy": "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   "x-frame-options": "DENY",
 };

@@ -200,6 +200,7 @@ describe("password gate", () => {
       headers: { cookie: cookiePair(good) },
     }), env, ctx);
     expect(office.status).toBe(200);
+    expect(office.headers.get("referrer-policy")).toBe("same-origin");
     const officeHtml = await office.text();
     expect(officeHtml.match(/class="seat /g)).toHaveLength(13);
     expect(officeHtml).toContain('href="/dash/hq.css"');
