@@ -8,7 +8,7 @@ import {
   parseRepoMap,
   parseSearchBody,
 } from "./github";
-import { fetchText, httpsUrl } from "./http";
+import { fetchSheet, fetchText, httpsUrl } from "./http";
 import { parseDocs } from "./docs";
 import { parsePostLog, parseStatus } from "./sheets";
 import type { Commit, DocLink, Post, Pull, RawData, StatusRow } from "./types";
@@ -19,7 +19,7 @@ async function loadCsv(ctx: ExecutionContext, name: string, url: string): Promis
   if (!httpsUrl(url)) return null;
   const hash = await digestKey(url);
   return cachedText(ctx, `https://team-hq.internal/v1/csv/${hash}`, name, () =>
-    fetchText(url, { Accept: "text/csv,text/plain,*/*", "User-Agent": "team-hq" }),
+    fetchSheet(url, { Accept: "text/csv,text/plain,*/*", "User-Agent": "team-hq" }),
   );
 }
 

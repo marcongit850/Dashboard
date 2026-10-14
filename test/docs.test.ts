@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildDemoRaw } from "../src/demo";
 import { docUrl, groupDocs, handbookFor, looksLikeSecret, otherDocsFor, parseDocs } from "../src/docs";
+import { sameConfiguredGid } from "../src/http";
 import { buildModel } from "../src/state";
 import { renderBot } from "../src/render";
 
@@ -24,6 +25,15 @@ const CSV = [
 ].join("\n");
 
 describe("docs inventory", () => {
+  it("refuses a redirect onto a different sheet gid", () => {
+    const docs = "https://docs.google.com/spreadsheets/d/e/PUB/pub?single=true&output=csv&gid=1034259486";
+    const kept = "https://doc-0c-3k-sheets.googleusercontent.com/pub/abc/e@PUB?single=true&output=csv&gid=1034259486";
+    const other = "https://docs.google.com/spreadsheets/d/e/PUB/pub?single=true&output=csv&gid=0";
+    expect(sameConfiguredGid(docs, kept)).toBe(true);
+    expect(sameConfiguredGid(docs, other)).toBe(false);
+    expect(sameConfiguredGid(docs, "https://docs.google.com/spreadsheets/d/e/PUB/pub?output=csv")).toBe(false);
+  });
+
   it("keeps Google doc links and drops deletes, other hosts, and secrets", () => {
     expect(looksLikeSecret("ghp_abcdefghijklmnopqrstuvwxyz1234567890")).toBe(true);
     expect(looksLikeSecret("How Bob builds the office")).toBe(false);

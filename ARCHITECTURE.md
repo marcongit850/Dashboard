@@ -16,7 +16,7 @@ Cloudflare Access can sit in front of the hostname later. Until `ACCESS_AUD` and
 
 ## Data sources
 
-All sheet URLs are plain vars in `wrangler.jsonc`. Posts and status point at the published Team HQ Log tabs. Docs stays blank until that CSV link is ready. A blank var, bad JSON, or a failed fetch renders an empty state. The page still loads.
+All sheet URLs are plain vars in `wrangler.jsonc`. Posts and status point at the published Team HQ Log tabs. Docs points at the published Key docs and sheets tab only. A blank var, bad JSON, or a failed fetch renders an empty state. The page still loads.
 
 Every bot logs in one workbook, Team HQ Log. Two tabs, two CSV links:
 
@@ -35,7 +35,7 @@ Example posts tab value (one string, the published CSV for that tab):
 https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv&gid=POSTS_GID
 ```
 
-Use the status tab gid for `STATUS_CSV_URL` and the docs tab gid for `DOCS_CSV_URL`. Posts and status are tabs of the Team HQ Log workbook. The docs inventory can be another tab or its own published sheet.
+Posts and status are tabs of the Team HQ Log workbook. Docs is a different workbook. `DOCS_CSV_URL` is only the published Key docs and sheets tab. The Worker requests that exact URL. A redirect is followed only when it keeps the same `gid`. It does not list tabs and it does not request any other gid. That workbook has private tabs.
 
 The bot column on the posts and status tabs is matched to the fixed roster without case sensitivity. Display names: Chief, Bob (Bob The Builder), money-man, Walton, Foody (Foody & Friends), Tango, Tik-Toker, Rank, Outreach, Scout, Warden, Savenello Marketing, Personal Assistant. Bot pages are `/bot/:slug`.
 
@@ -98,6 +98,7 @@ Open `http://127.0.0.1:8787/?demo=1` for sample data. Put `GITHUB_TOKEN=...` in 
 - `ACCESS_TEAM_DOMAIN` should be the team origin. Certs are read from `{origin}/cdn-cgi/access/certs`. The request must include `Cf-Access-Jwt-Assertion`.
 - `workers.dev` is public until Access is turned on. The in-Worker check is the second lock, not a replacement for Access.
 - `POSTS_CSV_URL`, `STATUS_CSV_URL`, and `DOCS_CSV_URL` are single https CSV links. `BOT_REPO_MAP` is JSON stored in a string var. Invalid JSON is an empty state, not a crash.
+- `DOCS_CSV_URL` is only the Key docs and sheets tab. Do not add another gid from that workbook. The Worker will not follow a redirect onto a different gid.
 - Doc links are limited to `docs.google.com` and `drive.google.com`. A private sheet still has to be published for the CSV fetch. Do not put a token in a doc title, description, or link. Those cells are dropped.
 - Keyword rules beat the repo map. A security PR on a savenello repo is Warden.
 - The map and the `savenello` / `money` prefix do not look at words inside other words. `ranking` does not go to Rank. `seo-titles` does.
