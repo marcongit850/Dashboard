@@ -8,9 +8,9 @@ npm test
 npx wrangler dev
 ```
 
-Sample data, with no sheet or GitHub calls: <http://127.0.0.1:8787/?demo=1>
+The site is served under `/dash`. Put `DASH_PASSWORD=...` in `.dev.vars` (gitignored), then open <http://127.0.0.1:8787/dash/login>. Sample data, with no sheet or GitHub calls: <http://127.0.0.1:8787/dash?demo=1>
 
-Live data uses the vars in `wrangler.jsonc` and the `GITHUB_TOKEN` secret. See [ARCHITECTURE.md](ARCHITECTURE.md) for sources, attribution, Access, and deploy.
+Live data uses the vars in `wrangler.jsonc` and the `GITHUB_TOKEN` secret. See [ARCHITECTURE.md](ARCHITECTURE.md) for sources, the password cookie, attribution, Access, and deploy.
 
 Deploy from `main` with Cloudflare Workers Builds:
 

@@ -1,4 +1,5 @@
 import { BOTS, botById, type Look } from "./bots";
+import { normalizeBase } from "./paths";
 import {
   commitEvent,
   COPY,
@@ -38,6 +39,7 @@ export type DashboardModel = {
   now: Date;
   demo: boolean;
   loginEnabled: boolean;
+  basePath: string;
   notes: string[];
   bots: BotCard[];
   feed: FeedItem[];
@@ -67,7 +69,7 @@ function newestText(options: { at: number; text: string }[]): string {
 export function buildModel(
   data: RawData,
   now: Date,
-  flags: { demo: boolean; loginEnabled: boolean },
+  flags: { demo: boolean; loginEnabled: boolean; basePath?: string },
 ): DashboardModel {
   const feed: FeedItem[] = [];
   const botNeeds: { at: number; item: NeedItem }[] = [];
@@ -211,6 +213,7 @@ export function buildModel(
     now,
     demo: flags.demo,
     loginEnabled: flags.loginEnabled,
+    basePath: normalizeBase(flags.basePath),
     notes: data.notes,
     bots: cards,
     feed: feed

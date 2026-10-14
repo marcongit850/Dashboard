@@ -2,8 +2,22 @@ import "./secrets";
 import { authorize } from "./access";
 import { COPY } from "./copy";
 import { buildDemoRaw } from "./demo";
+import {
+  clearFailures,
+  clearSessionCookie,
+  clientIp,
+  cookieKey,
+  noteFailure,
+  passwordConfigured,
+  passwordsMatch,
+  rateLimited,
+  requestHasSession,
+  sessionCookie,
+  issueSession,
+} from "./gate";
 import { loadRaw } from "./load";
-import { renderBot, renderCrash, renderDocs, renderHome, renderMissing } from "./render";
+import { baseHit, logicalPath, normalizeBase, safeNext, withBase } from "./paths";
+import { renderBot, renderCrash, renderDocs, renderHome, renderLogin, renderMissing } from "./render";
 import { buildModel, cardBySlug } from "./state";
 import { findBot } from "./bots";
 
@@ -12,7 +26,7 @@ const HTML: HeadersInit = {
   "cache-control": "private, no-store",
   "x-content-type-options": "nosniff",
   "referrer-policy": "no-referrer",
-  "content-security-policy": "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+  "content-security-policy": "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   "x-frame-options": "DENY",
 };
 
@@ -23,53 +37,138 @@ function text(body: string, status: number, extra: HeadersInit = {}): Response {
   });
 }
 
-function assetRequest(url: URL, request: Request): Request | null {
-  if (url.pathname === "/favicon.ico") return new Request(new URL("/favicon.svg", url.origin), request);
-  if (url.pathname === "/hq.css" || url.pathname === "/favicon.svg") return request;
+function html(body: string, status = 200, extra: HeadersInit = {}): Response {
+  const headers = new Headers(HTML);
+  for (const [key, value] of Object.entries(extra)) headers.set(key, value);
+  return new Response(body, { status, headers });
+}
+
+function assetRequest(logical: string, url: URL): Request | null {
+  if (logical === "/favicon.ico" || logical === "/favicon.svg") {
+    return new Request(new URL("/favicon.svg", url.origin));
+  }
+  if (logical === "/hq.css") return new Request(new URL("/hq.css", url.origin));
   return null;
+}
+
+function redirect(url: string, status: 302 | 303, extra: HeadersInit = {}): Response {
+  const headers = new Headers({ location: url, "cache-control": "no-store", ...extra });
+  return new Response(null, { status, headers });
 }
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const started = Date.now();
     const url = new URL(request.url);
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      return text(COPY.methodNotAllowed, 405, { allow: "GET, HEAD" });
+    const base = normalizeBase(env.BASE_PATH);
+    const hit = baseHit(url.pathname, base);
+    if (hit === "root") {
+      const dest = new URL(withBase(base, "/"), url.origin);
+      dest.search = url.search;
+      return redirect(dest.toString(), 302);
     }
+    if (hit === "out") return text(COPY.notHere, 404);
+
+    const logical = logicalPath(url.pathname, base);
+    const postOk = request.method === "POST" && (logical === "/login" || logical === "/logout");
+    if (request.method !== "GET" && request.method !== "HEAD" && !postOk) {
+      return text(COPY.methodNotAllowed, 405, { allow: "GET, HEAD, POST" });
+    }
+
     const auth = await authorize(request, env);
     if (!auth.ok) {
       console.log(JSON.stringify({ event: "access_denied", path: url.pathname }));
       return text(COPY.forbidden, 403);
     }
-    const asset = assetRequest(url, request);
+    if (!passwordConfigured(env.DASH_PASSWORD)) {
+      console.log(JSON.stringify({ event: "password_missing", path: url.pathname }));
+      return text(COPY.passwordMissing, 403);
+    }
+
+    const secret = cookieKey(env.DASH_PASSWORD, env.DASH_COOKIE_SECRET);
+    const authed = await requestHasSession(request, secret);
+
+    if (logical === "/login") {
+      if (request.method === "POST") return submitLogin(request, env, url, base, secret);
+      if (authed) {
+        const next = new URL(safeNext(base, url.searchParams.get("next"), url.origin), url.origin);
+        return redirect(next.toString(), 302);
+      }
+      const next = url.searchParams.get("next") ?? "";
+      return html(renderLogin({ basePath: base, error: "", next }));
+    }
+
+    if (logical === "/logout") {
+      console.log(JSON.stringify({ event: "logout", path: url.pathname }));
+      return redirect(new URL(withBase(base, "/login"), url.origin).toString(), 303, {
+        "set-cookie": clearSessionCookie(base),
+      });
+    }
+
+    const asset = assetRequest(logical, url);
     if (asset) return env.ASSETS.fetch(asset);
+
+    if (!authed) {
+      const login = new URL(withBase(base, "/login"), url.origin);
+      login.searchParams.set("next", `${url.pathname}${url.search}`);
+      return redirect(login.toString(), 302);
+    }
 
     const demo = url.searchParams.get("demo") === "1";
     const now = new Date();
     try {
       const raw = demo ? buildDemoRaw(now) : await loadRaw(env, ctx);
-      const model = buildModel(raw, now, { demo, loginEnabled: auth.loginEnabled });
-      if (url.pathname === "/") {
-        console.log(JSON.stringify({ event: "page", path: "/", demo, ms: Date.now() - started, notes: model.notes.length }));
-        return new Response(renderHome(model), { headers: HTML });
+      const model = buildModel(raw, now, { demo, loginEnabled: auth.loginEnabled, basePath: base });
+      if (logical === "/") {
+        console.log(JSON.stringify({ event: "page", path: withBase(base, "/"), demo, ms: Date.now() - started, notes: model.notes.length }));
+        return html(renderHome(model));
       }
-      if (url.pathname === "/docs" || url.pathname === "/docs/") {
-        console.log(JSON.stringify({ event: "page", path: "/docs", demo, ms: Date.now() - started, docs: model.docs.length }));
-        return new Response(renderDocs(model), { headers: HTML });
+      if (logical === "/docs") {
+        console.log(JSON.stringify({ event: "page", path: withBase(base, "/docs"), demo, ms: Date.now() - started, docs: model.docs.length }));
+        return html(renderDocs(model));
       }
-      const match = url.pathname.match(/^\/bot\/([a-z0-9-]+)\/?$/);
+      const match = logical.match(/^\/bot\/([a-z0-9-]+)$/);
       if (match) {
         const slug = match[1] ?? "";
         const known = findBot(slug);
         const card = known ? cardBySlug(model, known.slug) : undefined;
-        if (!card) return new Response(renderMissing(model, true), { status: 404, headers: HTML });
+        if (!card) return html(renderMissing(model, true), 404);
         console.log(JSON.stringify({ event: "page", path: "/bot/:slug", slug: card.slug, demo, ms: Date.now() - started }));
-        return new Response(renderBot(model, card), { headers: HTML });
+        return html(renderBot(model, card));
       }
-      return new Response(renderMissing(model, false), { status: 404, headers: HTML });
+      return html(renderMissing(model, false), 404);
     } catch {
       console.error(JSON.stringify({ event: "page_failed", path: url.pathname }));
-      return new Response(renderCrash(), { status: 500, headers: HTML });
+      return html(renderCrash(base), 500);
     }
   },
 } satisfies ExportedHandler<Env>;
+
+async function submitLogin(request: Request, env: Env, url: URL, base: string, secret: string): Promise<Response> {
+  const ip = clientIp(request);
+  if (rateLimited(ip)) {
+    console.log(JSON.stringify({ event: "login_limited" }));
+    return html(renderLogin({ basePath: base, error: COPY.loginLimited, next: "" }), 429);
+  }
+  let body = "";
+  try {
+    body = await request.text();
+  } catch {
+    body = "";
+  }
+  if (body.length > 2048) body = "";
+  const params = new URLSearchParams(body);
+  const supplied = params.get("password") ?? "";
+  const expected = env.DASH_PASSWORD?.trim() ?? "";
+  const ok = expected.length > 0 && (await passwordsMatch(supplied, expected));
+  if (!ok) {
+    noteFailure(ip);
+    console.log(JSON.stringify({ event: "login_failed" }));
+    return html(renderLogin({ basePath: base, error: COPY.loginWrong, next: params.get("next") ?? "" }), 401);
+  }
+  clearFailures(ip);
+  const token = await issueSession(secret);
+  const next = new URL(safeNext(base, params.get("next"), url.origin), url.origin).toString();
+  console.log(JSON.stringify({ event: "login_ok" }));
+  return redirect(next, 303, { "set-cookie": sessionCookie(token, base) });
+}

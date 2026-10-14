@@ -50,7 +50,7 @@ describe("dash-free copy", () => {
     const html = renderHome(page);
     assertClean(html);
     expect(html).toContain("Team HQ");
-    expect(html).toContain("Login not enabled yet");
+    expect(html).toContain("Cloudflare Access is not enabled yet");
     expect(html).toContain("Showing sample data.");
     expect(html).toContain(">Overview<");
     expect(html).toContain(">Posts<");
@@ -106,7 +106,7 @@ describe("dash-free copy", () => {
     expect(docsPage).not.toContain("example.com");
     expect(docsPage).not.toContain("ghp_");
     const signedIn = buildModel(buildDemoRaw(NOW), NOW, { demo: true, loginEnabled: true });
-    expect(renderHome(signedIn)).not.toContain("Login not enabled yet");
+    expect(renderHome(signedIn)).not.toContain("Cloudflare Access is not enabled yet");
   });
 
   it("renders empty sources and a missing page", () => {
@@ -146,8 +146,14 @@ describe("dash-free copy", () => {
     expect(config).not.toMatch(/"crons"/);
     expect(config).not.toMatch(/"triggers"/);
     expect(config).not.toMatch(/custom_domain/);
-    expect(config).not.toMatch(/"routes"/);
+    expect(config).toContain('"routes"');
+    expect(config).toContain("whatshappeningnetwork.com/dash");
+    expect(config).toContain("whatshappeningnetwork.com/dash/*");
+    expect(config).not.toMatch(/dash\*/);
+    expect(config).toContain('"BASE_PATH": "/dash"');
     expect(config).not.toContain("GITHUB_TOKEN");
+    expect(config).not.toContain("DASH_PASSWORD");
+    expect(config).not.toContain("DASH_COOKIE_SECRET");
     expect(config).toContain('"POSTS_CSV_URL"');
     expect(config).toContain('"STATUS_CSV_URL"');
     expect(config).toContain('"DOCS_CSV_URL"');
