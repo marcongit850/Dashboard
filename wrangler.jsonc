@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dashboard",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "f1c59948520f1ec39473238b621c7e24",
+  // workers.dev only. No custom domain and no schedule.
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    // JSON array of { "name", "url" } for published Google Sheet CSV tabs.
+    // Tabs: Walton County Updates, Food Guides, Seaclusion, Friends of Scenic 30A.
+    // Columns: posted_at_ct, bot, site, platform, account_or_group, status, topic, post_url, notes.
+    "POSTLOG_CSV_URLS": "[]",
+    // Savenello Marketing Log, Organic tab.
+    // Columns: Date, Channel/Platform, Account, Content type, Topic/Hook, Link, Status, Reach/Views, Clicks, Signups, Notes.
+    "SAVENELLO_CSV_URL": "",
+    // Team HQ status sheet.
+    // Columns: timestamp_ct, bot, state, task, link, needs_marc.
+    // state is started, finished, blocked, or idle. needs_marc is yes or no.
+    "STATUS_CSV_URL": "",
+    // JSON object of repo name to bot name. Overrides default GitHub attribution.
+    "BOT_REPO_MAP": "{}",
+    // Set both to verify Cloudflare Access. Leave both empty to allow everyone.
+    // ACCESS_TEAM_DOMAIN example: https://your-team.cloudflareaccess.com
+    "ACCESS_AUD": "",
+    "ACCESS_TEAM_DOMAIN": ""
+  }
+}

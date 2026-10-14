@@ -1,0 +1,99 @@
+# Team HQ architecture
+
+Team HQ is a private dashboard for Marc's bot team. It shows who is typing, who is idle, what posted this week, and what needs Marc. The page is built on each request. Nothing runs while the site is idle.
+
+## Worker and domain
+
+- Worker name: `dashboard`
+- Config: `wrangler.jsonc`
+- Account: `f1c59948520f1ec39473238b621c7e24`
+- Domain: the `workers.dev` subdomain only (`workers_dev: true`)
+- No custom domain and no route patterns
+- Static files live in `public/` and are served with Workers static assets (`ASSETS`)
+- HTML is rendered by the Worker. CSS, the office sprite, and the favicon are static assets
+
+Cloudflare Access can sit in front of the hostname later. Until `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` are both set, the Worker allows the request and shows "Login not enabled yet".
+
+## Data sources
+
+All sheet URLs are plain vars in `wrangler.jsonc`. Leave them blank until the published CSV links are ready. A blank var, bad JSON, or a failed fetch renders an empty state. The page still loads.
+
+| Var | What it is |
+| --- | --- |
+| `POSTLOG_CSV_URLS` | JSON array of `{ "name", "url" }` for the Team Social Post Log tabs: Walton County Updates, Food Guides, Seaclusion, Friends of Scenic 30A. Columns: `posted_at_ct`, `bot`, `site`, `platform`, `account_or_group`, `status`, `topic`, `post_url`, `notes`. |
+| `SAVENELLO_CSV_URL` | Savenello Marketing Log, Organic tab. Columns: Date, Channel/Platform, Account, Content type, Topic/Hook, Link, Status, Reach/Views, Clicks, Signups, Notes. Every row belongs to Savenello Marketing. |
+| `STATUS_CSV_URL` | Team HQ status sheet. Columns: `timestamp_ct`, `bot`, `state`, `task`, `link`, `needs_marc`. `state` is `started`, `finished`, `blocked`, or `idle`. `needs_marc` is `yes` or `no`. The latest row for each bot is the current task. |
+| `BOT_REPO_MAP` | JSON object of repo name to bot name. |
+| `ACCESS_AUD` | Cloudflare Access application AUD tag. |
+| `ACCESS_TEAM_DOMAIN` | Team issuer, for example `https://your-team.cloudflareaccess.com`. |
+
+Example post log value (one string):
+
+```json
+[{"name":"Walton County Updates","url":"https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv&gid=GID"}]
+```
+
+The bot column is matched to the fixed roster without case sensitivity. Display names: Chief, Bob (Bob The Builder), money-man, Walton, Foody (Foody & Friends), Tango, Tik-Toker, Rank, Outreach, Scout, Warden, Savenello Marketing, Personal Assistant. Bot pages are `/bot/:slug`.
+
+GitHub reads `marcongit850` with a few cached calls: one GraphQL query for the 12 most recently pushed repos (merged PRs, open PRs, recent commits) and one search for open PRs. Attribution:
+
+1. PR title or branch contains the whole word `security` or `warden`: Warden. `seo` or `rank`: Rank. Warden wins if both match.
+2. `BOT_REPO_MAP` overrides the default and the name prefix.
+3. Repo names starting with `savenello` or `money` belong to money-man.
+4. Everything else is Bob.
+
+## Secrets
+
+Only the secret name is listed here. Do not put the value in git, in `wrangler.jsonc`, or in a var.
+
+- `GITHUB_TOKEN`: read-only fine-grained GitHub token that can read pull requests, contents, and metadata on `marcongit850` repositories. Set it with `npx wrangler secret put GITHUB_TOKEN`.
+
+The token is optional at runtime. If it is missing, GitHub shows as not connected and the rest of the page still renders. It is not in `secrets.required`, because that check would refuse `npx wrangler deploy` before the token exists.
+
+Sheet URLs are vars, so anyone who can read the Worker config can see them. Do not hide a credential inside a URL. Publish the tabs, or use a link that is already public to the internet. The Worker fetches server side and cannot use your browser cookies.
+
+## Cost while idle
+
+- No cron triggers in config, and none should be added in the dashboard
+- No Workers AI and no other model calls
+- The browser has no script, no polling, and no auto refresh
+- Upstream reads happen only when someone opens a page
+- Those reads use the Cache API (`caches.default`) with `max-age=300` (about 5 minutes)
+- The HTML response is `private, no-store`. Only the sheet and GitHub bodies are cached
+- The Cache API is per data center. The first request in a city after expiry fetches again. Nobody is called when the tab is closed
+
+Draft, scheduled, skipped, cancelled, failed, idea, planned, and queued rows are hidden. Open pull requests older than 24 hours show under Needs you. A bot is busy when the latest status is `started`, or when a post, merged PR, or commit is within 2 hours. `idle` and `finished` rows do not keep a bot typing. `blocked` or `needs_marc=yes` on the latest row paints the red mark. The bubble uses the current task when the latest status is `started` or `blocked`. Otherwise it uses the latest post topic, merged PR title, or commit subject.
+
+Times are Central Time (`America/Chicago`). A sheet time with no zone is read as Central Time.
+
+`?demo=1` renders fixture data and does not call Google or GitHub. It is not an access bypass. If Access is on, the JWT is still required.
+
+## Deploy
+
+Deploy with Cloudflare Workers Builds from `main`:
+
+- Production branch: `main`
+- Deploy command: `npx wrangler deploy`
+
+Workers Builds installs dependencies from `package.json` before that command. Do not add a cron trigger to the build or to the Worker settings.
+
+Local check:
+
+```bash
+npm test
+npx wrangler dev
+```
+
+Open `http://127.0.0.1:8787/?demo=1` for sample data. Put `GITHUB_TOKEN=...` in `.dev.vars` (gitignored) when you want live GitHub data locally.
+
+## Gotchas
+
+- Set both Access vars or neither. If only one is set, the Worker returns 403.
+- `ACCESS_TEAM_DOMAIN` should be the team origin. Certs are read from `{origin}/cdn-cgi/access/certs`. The request must include `Cf-Access-Jwt-Assertion`.
+- `workers.dev` is public until Access is turned on. The in-Worker check is the second lock, not a replacement for Access.
+- `POSTLOG_CSV_URLS` and `BOT_REPO_MAP` are JSON stored in string vars. Invalid JSON is an empty state, not a crash.
+- Keyword rules beat the repo map. A security PR on a savenello repo is Warden.
+- The map and the `savenello` / `money` prefix do not look at words inside other words. `ranking` does not go to Rank. `seo-titles` does.
+- Google must return CSV to an anonymous HTTPS GET. A private sheet that only you can open will fail and show an empty state.
+- Cache entries are not purged globally. After you change a sheet, wait about 5 minutes, or expect the previous copy until that datacenter expires it.
+- Do not add a cron, a scheduled handler, or a meta refresh. Any of those would wake the Worker while nobody is looking.
