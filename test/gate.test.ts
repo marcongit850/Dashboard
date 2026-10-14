@@ -204,7 +204,7 @@ describe("password gate", () => {
     expect(officeHtml).toContain('href="/dash/hq.css"');
     expect(officeHtml).toContain('href="/dash/logout"');
     expect(officeHtml).toContain("at-12");
-    expect(officeHtml).toContain(COPY.loginNotice);
+    expect(officeHtml).not.toContain(COPY.loginNotice);
 
     const docs = await worker.fetch(new Request("http://example.com/dash/docs?demo=1", {
       headers: { cookie: cookiePair(good) },
@@ -218,6 +218,7 @@ describe("password gate", () => {
     expect(idle.status).toBe(200);
     const idleHtml = await idle.text();
     expect(idleHtml).toContain("Outreach");
+    expect(idleHtml).not.toContain(COPY.loginNotice);
     expect(idleHtml).toContain(COPY.leaning);
     expect(idleHtml).toContain('href="/dash?demo=1"');
 

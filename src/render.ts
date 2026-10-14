@@ -28,8 +28,8 @@ function header(base: string, demo: boolean, clock: string, logout: boolean): st
   </div></header>`;
 }
 
-function notices(model: DashboardModel): string {
-  const login = model.loginEnabled ? "" : `<p class="notice">${COPY.loginNotice}</p>`;
+function notices(model: Pick<DashboardModel, "loginEnabled" | "passwordGate" | "demo" | "notes">): string {
+  const login = model.passwordGate || model.loginEnabled ? "" : `<p class="notice">${COPY.loginNotice}</p>`;
   const demo = model.demo ? `<p class="notice demo">${COPY.demoNotice}</p>` : "";
   const notes = model.notes.length
     ? `<ul class="warnings">${model.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>`
@@ -37,7 +37,7 @@ function notices(model: DashboardModel): string {
   return `${login}${demo}${notes}`;
 }
 
-function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "now" | "notes" | "basePath">, title: string, main: string): string {
+function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "passwordGate" | "now" | "notes" | "basePath">, title: string, main: string): string {
   const base = model.basePath;
   return `<!doctype html>
 <html lang="en">
@@ -53,7 +53,7 @@ function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "now" | "no
 <body>
 ${header(base, model.demo, formatCt(model.now, true), true)}
 <main>
-${notices(model as DashboardModel)}
+${notices(model)}
 ${main}
 </main>
 <footer><p>${COPY.footer}</p></footer>

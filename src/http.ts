@@ -1,4 +1,15 @@
+import { clip, redactSecrets } from "./html";
+
 const MAX_BYTES = 1_500_000;
+
+export type RemoteText = { status: number; body: string | null; detail: string };
+
+// An empty landed URL still belongs to the https request. workerd can omit response.url on a successful POST.
+export function usableRemote(status: number, landedUrl: string): boolean {
+  if (status < 200 || status >= 300) return false;
+  if (landedUrl && !landedUrl.startsWith("https://")) return false;
+  return true;
+}
 
 async function readLimited(response: Response): Promise<string | null> {
   const declared = Number(response.headers.get("content-length") ?? "0");
@@ -76,22 +87,31 @@ export async function fetchSheet(url: string, headers: HeadersInit): Promise<str
   }
 }
 
-export async function fetchText(url: string, headers: HeadersInit, method: "GET" | "POST" = "GET", body?: string): Promise<string | null> {
+export async function fetchRemote(
+  url: string,
+  init: { headers: HeadersInit; method?: "GET" | "POST"; body?: string },
+): Promise<RemoteText> {
   try {
     const response = await fetch(url, {
-      method,
-      headers,
-      body,
+      method: init.method ?? "GET",
+      headers: init.headers,
+      body: init.body,
       redirect: "follow",
       signal: AbortSignal.timeout(8000),
     });
-    if (!response.ok || !response.url.startsWith("https://")) {
+    const status = response.status;
+    if (response.url && !response.url.startsWith("https://")) {
       await response.body?.cancel();
-      return null;
+      return { status, body: null, detail: "redirect left https" };
     }
-    return await readLimited(response);
+    const text = await readLimited(response);
+    if (text == null) return { status, body: null, detail: "response too large" };
+    if (!usableRemote(status, response.url)) {
+      return { status, body: null, detail: clip(redactSecrets(text), 180) };
+    }
+    return { status, body: text, detail: "" };
   } catch {
-    return null;
+    return { status: 0, body: null, detail: "no response" };
   }
 }
 

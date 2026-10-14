@@ -41,6 +41,7 @@ export type DashboardModel = {
   now: Date;
   demo: boolean;
   loginEnabled: boolean;
+  passwordGate: boolean;
   basePath: string;
   notes: string[];
   bots: BotCard[];
@@ -63,15 +64,10 @@ function latestRow(rows: StatusRow[], state?: StatusRow["state"]): StatusRow | n
   return best;
 }
 
-function newestText(options: { at: number; text: string }[]): string {
-  const sorted = options.filter((item) => item.text).sort((a, b) => b.at - a.at || a.text.localeCompare(b.text));
-  return sorted[0]?.text ?? "";
-}
-
 export function buildModel(
   data: RawData,
   now: Date,
-  flags: { demo: boolean; loginEnabled: boolean; basePath?: string },
+  flags: { demo: boolean; loginEnabled: boolean; basePath?: string; passwordGate?: boolean },
 ): DashboardModel {
   const feed: FeedItem[] = [];
   const botNeeds: { at: number; item: NeedItem }[] = [];
@@ -82,20 +78,12 @@ export function buildModel(
     const commits = data.commits.filter((commit) => commit.botId === bot.id);
     const latest = latestRow(statuses);
     const finished = latestRow(statuses, "finished");
-    const busy =
-      latest?.state === "started" ||
-      posts.some((post) => withinHours(post.at, now, TWO_HOURS_MS)) ||
-      merged.some((pull) => pull.mergedAt !== null && withinHours(pull.mergedAt, now, TWO_HOURS_MS)) ||
-      commits.some((commit) => withinHours(commit.at, now, TWO_HOURS_MS));
+    const typing =
+      (latest?.state === "started" || latest?.state === "working") &&
+      withinHours(latest.at, now, TWO_HOURS_MS);
+    const busy = typing;
     const attention = latest?.state === "blocked" || latest?.needsMarc === true;
-    const taskBubble = latest && (latest.state === "started" || latest.state === "blocked") ? latest.task : "";
-    const fallback = newestText([
-      ...posts.map((post) => ({ at: post.at.getTime(), text: post.topic })),
-      ...merged.map((pull) => ({ at: pull.mergedAt?.getTime() ?? 0, text: pull.title })),
-      ...commits.map((commit) => ({ at: commit.at.getTime(), text: commit.message })),
-    ]);
-    let bubble = taskBubble || fallback;
-    if (busy && !bubble) bubble = COPY.workingFallback;
+    const bubble = busy ? latest?.task || COPY.workingFallback : "";
     const workingNow = busy
       ? bubble
       : latest?.state === "blocked"
@@ -216,6 +204,7 @@ export function buildModel(
     now,
     demo: flags.demo,
     loginEnabled: flags.loginEnabled,
+    passwordGate: flags.passwordGate === true,
     basePath: normalizeBase(flags.basePath),
     notes: data.notes,
     bots: cards,

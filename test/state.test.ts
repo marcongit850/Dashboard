@@ -2,10 +2,22 @@ import { describe, expect, it } from "vitest";
 import { accessMode, teamIssuer } from "../src/access";
 import { CACHE_TTL_SECONDS } from "../src/cache";
 import { buildDemoRaw } from "../src/demo";
-import { attributeBot, parseGraphqlBody, parseRepoMap, parseSearchBody } from "../src/github";
+import {
+  attributeBot,
+  githubAuthorization,
+  graphqlProblem,
+  parseGraphqlBody,
+  parseRepoMap,
+  parseRestCommits,
+  parseRestPulls,
+  parseRestRepoNames,
+  parseSearchBody,
+  restHistoryFromRepos,
+} from "../src/github";
+import { parsePostLog, parseStatus } from "../src/sheets";
 import { buildModel, type BotCard } from "../src/state";
 import { ctWallToUtc, DAY_MS, TWO_HOURS_MS } from "../src/time";
-import type { Post, Pull, RawData, StatusRow } from "../src/types";
+import type { Commit, Post, Pull, RawData, StatusRow } from "../src/types";
 
 const NOW = new Date("2026-10-14T20:00:00.000Z");
 
@@ -36,6 +48,10 @@ function pull(createdAt: Date, mergedAt: Date | null, botId: string, title: stri
   return { repo: "dashboard", title, branch: "main", url: `https://example.com/${title}`, createdAt, mergedAt, botId };
 }
 
+function commit(at: Date, botId: string, message: string): Commit {
+  return { repo: "dashboard", message, url: "https://example.com/commit", at, branch: "main", botId };
+}
+
 function model(data: RawData, now = NOW) {
   return buildModel(data, now, { demo: false, loginEnabled: true });
 }
@@ -51,26 +67,72 @@ describe("state", () => {
     expect(CACHE_TTL_SECONDS).toBe(300);
   });
 
-  it("is busy for started, or for activity inside 2 hours", () => {
-    const started = model(raw({
-      statuses: [status(new Date(NOW.getTime() - 10 * DAY_MS), "chief", "started", "Review the board")],
-    }));
-    expect(bot(started.bots, "chief").busy).toBe(true);
-    expect(bot(started.bots, "chief").bubble).toBe("Review the board");
+  it("types only when the newest status is started or working and fresh", () => {
+    const now = ctWallToUtc(2026, 10, 14, 12, 0, 0)!;
+    const fresh = ctWallToUtc(2026, 10, 14, 11, 30, 0)!;
+    const old = ctWallToUtc(2026, 10, 14, 9, 0, 0)!;
+    const edge = new Date(now.getTime() - TWO_HOURS_MS);
+    const past = new Date(now.getTime() - TWO_HOURS_MS - 1);
 
-    const recent = model(raw({
-      statuses: [status(new Date(NOW.getTime() - 60_000), "walton", "idle", "")],
-      posts: [post(new Date(NOW.getTime() - TWO_HOURS_MS), "walton", "Flags")],
-    }));
-    expect(bot(recent.bots, "walton").busy).toBe(true);
-    expect(bot(recent.bots, "walton").bubble).toBe("Flags");
+    const working = model(raw({
+      statuses: [status(fresh, "chief", "working", "Write the board")],
+    }), now);
+    expect(bot(working.bots, "chief")).toMatchObject({ busy: true, bubble: "Write the board" });
 
-    const stale = model(raw({
-      posts: [post(new Date(NOW.getTime() - TWO_HOURS_MS - 1), "walton", "Flags")],
-    }));
-    expect(bot(stale.bots, "walton").busy).toBe(false);
-    expect(bot(stale.bots, "walton").bubble).toBe("");
-    expect(bot(stale.bots, "walton").workingNow).toBe("Idle");
+    const staleStarted = model(raw({
+      statuses: [status(old, "tik-toker", "started", "Cut the pier reel")],
+    }), now);
+    expect(bot(staleStarted.bots, "tik-toker")).toMatchObject({ busy: false, bubble: "" });
+
+    expect(bot(model(raw({
+      statuses: [status(edge, "bob", "started", "Still on time")],
+    }), now).bots, "bob").busy).toBe(true);
+    expect(bot(model(raw({
+      statuses: [status(past, "bob", "started", "Too old")],
+    }), now).bots, "bob").busy).toBe(false);
+
+    const tied = ctWallToUtc(2026, 10, 14, 11, 0, 0)!;
+    const laterWins = model(raw({
+      statuses: [
+        status(tied, "scout", "started", "First"),
+        status(tied, "scout", "idle", "Second"),
+      ],
+    }), now);
+    expect(bot(laterWins.bots, "scout").busy).toBe(false);
+
+    const postOnly = model(raw({
+      posts: [post(fresh, "walton", "Flags")],
+      pulls: [pull(fresh, fresh, "bob", "Ship the desk")],
+      commits: [commit(fresh, "rank", "Fix seo titles")],
+    }), now);
+    expect(bot(postOnly.bots, "walton")).toMatchObject({ busy: false, bubble: "" });
+    expect(bot(postOnly.bots, "bob")).toMatchObject({ busy: false, bubble: "" });
+    expect(bot(postOnly.bots, "rank")).toMatchObject({ busy: false, bubble: "" });
+    expect(postOnly.feed.some((item) => item.text.includes("Flags"))).toBe(true);
+    expect(postOnly.feed.some((item) => item.text.includes("Ship the desk"))).toBe(true);
+  });
+
+  it("does not type Walton after a finished row when a post is in the feed", () => {
+    const statuses = parseStatus([
+      "timestamp_ct,bot,state,task,link,needs_marc",
+      "2026-10-13 16:00,Walton,started,Draft the recap,,no",
+      "2026-10-14 10:26,Walton,finished,File the BCC notes,,no",
+    ].join("\n")).rows;
+    const posts = parsePostLog([
+      "posted_at_ct,bot,site,platform,account,status,topic,post_url,reach,clicks,signups,notes",
+      "2026-10-14 10:40,Walton,Walton County Updates,Facebook,,posted,BCC Oct 13 meeting recap (mirror),https://example.com/bcc,1,0,0,",
+    ].join("\n")).posts;
+    const now = ctWallToUtc(2026, 10, 14, 11, 10, 0)!;
+    const page = model(raw({ statuses, posts }), now);
+    const walton = bot(page.bots, "walton");
+    expect(statuses[1]?.at.toISOString()).toBe("2026-10-14T15:26:00.000Z");
+    expect(walton.busy).toBe(false);
+    expect(walton.bubble).toBe("");
+    expect(walton.workingNow).toBe("Idle");
+    expect(walton.finishedLine).toContain("File the BCC notes");
+    expect(page.feed.some((item) => item.text.includes("BCC Oct 13 meeting recap (mirror)"))).toBe(true);
+    expect(walton.history.some((item) => item.text.includes("BCC Oct 13 meeting recap (mirror)"))).toBe(true);
+    expect(walton.bubble).not.toContain("BCC Oct 13 meeting recap (mirror)");
   });
 
   it("lets a newer idle row replace started, and keeps finished separate", () => {
@@ -124,7 +186,7 @@ describe("state", () => {
     }));
     expect(page.needs.map((item) => item.title)).toEqual(["Budget draft"]);
     expect(page.needs[0]?.detail).toContain("2 days old");
-    expect(bot(page.bots, "bob").busy).toBe(true);
+    expect(bot(page.bots, "bob")).toMatchObject({ busy: false, bubble: "" });
   });
 
   it("buckets posts Monday through Sunday in Central Time", () => {
@@ -198,6 +260,30 @@ describe("state", () => {
     }), map);
     expect(search?.[0]?.botId).toBe("money-man");
     expect(search?.[0]?.repo).toBe("money-notes");
+    expect(githubAuthorization("ghp_exampletokenvalue000000000000")).toBe("Bearer ghp_exampletokenvalue000000000000");
+    expect(githubAuthorization("Bearer ghp_exampletokenvalue000000000000")).toBe("Bearer ghp_exampletokenvalue000000000000");
+    expect(githubAuthorization("token ghp_exampletokenvalue000000000000")).toBe("Bearer ghp_exampletokenvalue000000000000");
+    expect(graphqlProblem(JSON.stringify({ errors: [{ message: "bad token ghp_exampletokenvalue000000000000" }] }))).not.toContain("ghp_");
+    expect(parseRestRepoNames(JSON.stringify([{ name: "Dashboard" }, { name: "whatshappening" }]))).toEqual(["Dashboard", "whatshappening"]);
+    const merged = parseRestPulls(JSON.stringify([
+      { title: "Add the pixel office", html_url: "https://github.com/marcongit850/Dashboard/pull/1", created_at: "2026-10-14T12:00:00Z", merged_at: "2026-10-14T18:00:00Z", head: { ref: "sprites" } },
+      { title: "Closed without merge", html_url: "https://github.com/marcongit850/Dashboard/pull/2", created_at: "2026-10-14T12:00:00Z", merged_at: null, head: { ref: "wip" } },
+    ]), "Dashboard", {}, "merged");
+    expect(merged?.map((item) => item.title)).toEqual(["Add the pixel office"]);
+    const commits = parseRestCommits(JSON.stringify([
+      { html_url: "https://github.com/marcongit850/Dashboard/commit/aaa", commit: { message: "Merge pull request #1\n\nbody", committer: { date: "2026-10-14T18:00:00Z" } } },
+      { html_url: "https://github.com/marcongit850/Dashboard/commit/bbb", commit: { message: "Tidy the desk grid", committer: { date: "2026-10-14T17:00:00Z" } } },
+    ]), "Dashboard", {});
+    expect(commits?.map((item) => item.message)).toEqual(["Tidy the desk grid"]);
+    const partial = restHistoryFromRepos([
+      { name: "Dashboard", closed: JSON.stringify([{ title: "Add the pixel office", html_url: "https://github.com/marcongit850/Dashboard/pull/1", created_at: "2026-10-14T12:00:00Z", merged_at: "2026-10-14T18:00:00Z", head: { ref: "sprites" } }]), open: "[]", commits: "[]" },
+      { name: "broken-repo", closed: null, open: null, commits: null },
+    ], {});
+    expect(partial.failedRepos).toEqual(["broken-repo"]);
+    expect(partial.work?.merged.map((item) => item.title)).toEqual(["Add the pixel office"]);
+    expect(restHistoryFromRepos([
+      { name: "broken-repo", closed: null, open: null, commits: null },
+    ], {}).work).toBeNull();
   });
 
   it("builds a stable demo office", () => {
@@ -206,12 +292,13 @@ describe("state", () => {
     expect(page.feed).toHaveLength(10);
     expect(page.feed[0]?.text).toContain("Review the morning board");
     expect(page.week.map((day) => day.count)).toEqual([4, 6, 3, 0, 0, 0, 0]);
-    expect(bot(page.bots, "chief").busy).toBe(true);
-    expect(bot(page.bots, "tik-toker").busy).toBe(true);
-    expect(bot(page.bots, "tik-toker").bubble).toBe("Cut the pier reel");
-    expect(bot(page.bots, "bob").bubble).toBe("Add the pixel office");
-    expect(bot(page.bots, "rank").bubble).toBe("Fix seo titles");
-    expect(bot(page.bots, "walton").bubble).toBe("Beach flags are up");
+    expect(page.bots.filter((card) => card.busy).map((card) => card.id)).toEqual(["chief"]);
+    expect(bot(page.bots, "chief").bubble).toBe("Review the morning board");
+    expect(bot(page.bots, "tik-toker")).toMatchObject({ busy: false, bubble: "" });
+    expect(bot(page.bots, "bob").bubble).toBe("");
+    expect(bot(page.bots, "rank").bubble).toBe("");
+    expect(bot(page.bots, "walton").bubble).toBe("");
+    expect(page.feed.some((item) => item.text.includes("Beach flags are up"))).toBe(true);
     expect(bot(page.bots, "warden")).toMatchObject({ busy: false, attention: true, bubble: "", workingNow: "Waiting on a policy check" });
     expect(bot(page.bots, "money-man").attention).toBe(true);
     expect(bot(page.bots, "money-man").busy).toBe(false);

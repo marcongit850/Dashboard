@@ -107,6 +107,8 @@ describe("dash-free copy", () => {
     expect(docsPage).not.toContain("ghp_");
     const signedIn = buildModel(buildDemoRaw(NOW), NOW, { demo: true, loginEnabled: true });
     expect(renderHome(signedIn)).not.toContain("Cloudflare Access is not enabled yet");
+    const gated = buildModel(buildDemoRaw(NOW), NOW, { demo: false, loginEnabled: false, passwordGate: true });
+    expect(renderHome(gated)).not.toContain("Cloudflare Access is not enabled yet");
   });
 
   it("renders empty sources and a missing page", () => {

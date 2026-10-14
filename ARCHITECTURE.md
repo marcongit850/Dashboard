@@ -18,7 +18,7 @@ Team HQ is a private dashboard for Marc's bot team. It shows who is typing, who 
 
 `whatshappeningnetwork.com` and `www.whatshappeningnetwork.com` are custom domains on the `whatshappening` Worker. The zone has no other Workers Routes. A route runs before that custom domain for a matching path, so `/dash` can belong to this Worker while the rest of the site stays put. `/dash` on the apex host was a 404, so the route does not replace a live page. The pattern is `/dash` and `/dash/*`, not `dash*`, because `dash*` would also take paths such as `/dashboard` away from the existing site. `www` is not routed. `www.whatshappeningnetwork.com/dash` still hits the `whatshappening` Worker.
 
-The dashboard password is required. If `DASH_PASSWORD` is missing, every path returns 403. Cloudflare Access stays optional. Until `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` are both set, the Worker skips the JWT check and shows "Cloudflare Access is not enabled yet" after the password gate. If only one Access var is set, the Worker returns 403.
+The dashboard password is required. If `DASH_PASSWORD` is missing, every path returns 403. Cloudflare Access stays optional. If both `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` are set, the Worker checks the Access JWT before the password. If only one Access var is set, the Worker returns 403. When the password gate is active, pages do not show "Cloudflare Access is not enabled yet", because the password form is the login.
 
 ## Data sources
 
@@ -29,7 +29,7 @@ Every bot logs in one workbook, Team HQ Log. Two tabs, two CSV links:
 | Var | What it is |
 | --- | --- |
 | `POSTS_CSV_URL` | Posts tab. Columns: `posted_at_ct`, `bot`, `site`, `platform`, `account`, `status`, `topic`, `post_url`, `reach`, `clicks`, `signups`, `notes`. The bot comes from the `bot` column. Reach, clicks, and signups are kept with the row notes. |
-| `STATUS_CSV_URL` | Status tab. Columns: `timestamp_ct`, `bot`, `state`, `task`, `link`, `needs_marc`. `state` is `started`, `finished`, `blocked`, or `idle`. `needs_marc` is `yes` or `no`. The latest row for each bot is the current task. |
+| `STATUS_CSV_URL` | Status tab. Columns: `timestamp_ct`, `bot`, `state`, `task`, `link`, `needs_marc`. `state` is `started`, `working`, `finished`, `done`, `blocked`, or `idle`. `done` counts as `finished`. `working` counts as in progress, the same as `started`. `needs_marc` is `yes` or `no`. The newest row by timestamp is the current task. A later row wins when timestamps match. |
 | `DOCS_CSV_URL` | Key docs and sheets tab. Columns: `Name`, `Link`, `What it is`, `Owner bot`. |
 | `BOT_REPO_MAP` | JSON object of repo name to bot name. |
 | `ACCESS_AUD` | Cloudflare Access application AUD tag. |
@@ -48,7 +48,7 @@ The bot column on the posts and status tabs is matched to the fixed roster witho
 
 `/dash/docs` reads `DOCS_CSV_URL` on the same page load and caches the CSV for about 5 minutes, like the other sheets. Rows are grouped by Owner bot, roster order first, then any other owner names. The name is the link and "What it is" sits under it. A row is skipped when Name contains `DELETE`, or when Link is not an http or https URL on `docs.google.com` or `drive.google.com`. Cells that look like secrets are not rendered. A secret-shaped description is left blank. Each bot page links that bot's handbook (a row whose name contains handbook), or the Team handbooks folder when that bot has none, and lists the bot's other docs. When `DOCS_CSV_URL` is blank the page says "Docs sheet is not connected yet."
 
-GitHub reads `marcongit850` with a few cached calls: one GraphQL query for the 12 most recently pushed repos (merged PRs, open PRs, recent commits) and one search for open PRs. Attribution:
+GitHub reads `marcongit850` with cached calls. The first call is a GraphQL query for the 12 most recently pushed repos (merged PRs, open PRs, recent commits). Each call sends `User-Agent: team-hq` and `Authorization: Bearer`. A token saved with a leading `Bearer` or `token` prefix is still sent once. The Worker logs `github_response` with the path and HTTP status, and `github_http_error` when a call fails. It does not log the token. A successful response is kept when `response.url` is empty, which the runtime can do on a POST. If GraphQL does not return the user, the Worker reads `GET /users/marcongit850/repos` and then pulls and commits for each repo. One repo that fails does not drop the others. The page names the failed call and includes the HTTP status. Search for open PRs is extra. A search failure does not hide history that loaded. Attribution:
 
 1. PR title or branch contains the whole word `security` or `warden`: Warden. `seo` or `rank`: Rank. Warden wins if both match.
 2. `BOT_REPO_MAP` overrides the default and the name prefix.
@@ -77,7 +77,7 @@ Sheet URLs are vars, so anyone who can read the Worker config can see them. Do n
 - The HTML response is `private, no-store`. Only the sheet and GitHub bodies are cached
 - The Cache API is per data center. The first request in a city after expiry fetches again. Nobody is called when the tab is closed
 
-Draft, scheduled, skipped, cancelled, failed, idea, planned, and queued rows are hidden. Open pull requests older than 24 hours show under Needs you. A bot is busy when the latest status is `started`, or when a post, merged PR, or commit is within 2 hours. `idle` and `finished` rows do not keep a bot typing. `blocked` or `needs_marc=yes` on the latest row paints the red mark. The bubble uses the current task when the latest status is `started` or `blocked`. Otherwise it uses the latest post topic, merged PR title, or commit subject.
+Draft, scheduled, skipped, cancelled, failed, idea, planned, and queued rows are hidden. Open pull requests older than 24 hours show under Needs you. A bot is typing only when its newest status row, by timestamp, is `started` or `working`, and that row is not older than about 2 hours. A newer `finished`, `done`, or `idle` row stops typing. Posts, merged PRs, and commits stay in the feed and in history. They do not make a bot type, and they do not fill the typing bubble. The bubble is the current task while the bot is typing. `blocked` or `needs_marc=yes` on the latest row paints the red mark and does not force typing.
 
 Times are Central Time (`America/Chicago`). A sheet time with no zone is read as Central Time. A trailing `CT`, `CST`, `CDT`, or `Central Time` label means the same.
 
