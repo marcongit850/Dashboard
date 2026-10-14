@@ -757,9 +757,19 @@ footer {
   }
 
   .portrait .bubble {
-    width: min(168px, calc(100vw - 36px));
+    position: static;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto 6px;
     font-size: 12px;
     -webkit-line-clamp: 2;
+  }
+
+  .portrait .bubble::after {
+    display: none;
   }
 
   .bot-hero,
