@@ -3,7 +3,7 @@ import { authorize } from "./access";
 import { COPY } from "./copy";
 import { buildDemoRaw } from "./demo";
 import { loadRaw } from "./load";
-import { renderBot, renderCrash, renderHome, renderMissing } from "./render";
+import { renderBot, renderCrash, renderDocs, renderHome, renderMissing } from "./render";
 import { buildModel, cardBySlug } from "./state";
 import { findBot } from "./bots";
 
@@ -52,6 +52,10 @@ export default {
       if (url.pathname === "/") {
         console.log(JSON.stringify({ event: "page", path: "/", demo, ms: Date.now() - started, notes: model.notes.length }));
         return new Response(renderHome(model), { headers: HTML });
+      }
+      if (url.pathname === "/docs" || url.pathname === "/docs/") {
+        console.log(JSON.stringify({ event: "page", path: "/docs", demo, ms: Date.now() - started, docs: model.docs.length }));
+        return new Response(renderDocs(model), { headers: HTML });
       }
       const match = url.pathname.match(/^\/bot\/([a-z0-9-]+)\/?$/);
       if (match) {

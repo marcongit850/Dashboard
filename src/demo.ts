@@ -1,3 +1,4 @@
+import { parseDocs } from "./docs";
 import { attributeBot, parseRepoMap } from "./github";
 import { addCalendarDays, ctWallParts, ctWallToUtc, startOfWeekCt } from "./time";
 import type { Commit, Post, Pull, RawData, StatusRow, StatusState } from "./types";
@@ -119,5 +120,22 @@ export function buildDemoRaw(now: Date): RawData {
     commit("money-ledger", "Reconcile the week", "main", "https://github.com/marcongit850/money-ledger/commit/jkl", 10),
   ];
 
-  return { posts, statuses, pulls, commits, notes: [] };
+  const docs = parseDocs(
+    [
+      "Name,Link,What it is,Owner bot",
+      "Team handbooks folder,https://drive.google.com/drive/folders/team-handbooks,Every bot handbook,Chief",
+      "Morning board,https://docs.google.com/document/d/morning,What the team is doing today,Chief",
+      "Bob handbook,https://docs.google.com/document/d/bob-handbook,How Bob builds the office,Bob The Builder",
+      "Desk notes,https://docs.google.com/document/d/bob-notes,Layout notes for the room,Bob",
+      "Budget sheet,https://docs.google.com/spreadsheets/d/budget,Spend and invoices,money-man",
+      "Beach guide,http://docs.google.com/document/d/beach,Flags and parking,Walton",
+      "DELETE old board,https://docs.google.com/document/d/old,Retired,Chief",
+      "Public site,https://example.com/not-google,Not a Google doc,Walton",
+      "Token dump,https://docs.google.com/document/d/token,ghp_abcdefghijklmnopqrstuvwxyz1234567890,Warden",
+      "Secret name,https://docs.google.com/document/d/hidden,Should not show,ghp_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "Vendor list,https://drive.google.com/drive/folders/vendors,Outside contacts,Scenic Friends",
+    ].join("\n"),
+  ).docs;
+
+  return { posts, statuses, pulls, commits, docs, notes: [] };
 }

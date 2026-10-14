@@ -9,8 +9,9 @@ import {
   parseSearchBody,
 } from "./github";
 import { fetchText, httpsUrl } from "./http";
+import { parseDocs } from "./docs";
 import { parsePostLog, parseStatus } from "./sheets";
-import type { Commit, Post, Pull, RawData, StatusRow } from "./types";
+import type { Commit, DocLink, Post, Pull, RawData, StatusRow } from "./types";
 
 type SourceResult<T> = { rows: T[]; notes: string[] };
 
@@ -44,6 +45,18 @@ async function loadStatus(env: Env, ctx: ExecutionContext): Promise<SourceResult
   const notes = sheet.notes.slice();
   if (!sheet.rows.length && !notes.length) notes.push(noRows("Status sheet"));
   return { rows: sheet.rows, notes };
+}
+
+async function loadDocs(env: Env, ctx: ExecutionContext): Promise<SourceResult<DocLink>> {
+  const url = env.DOCS_CSV_URL.trim();
+  if (!url) return { rows: [], notes: [COPY.docsOff] };
+  if (!httpsUrl(url)) return { rows: [], notes: [httpsOnly("Docs sheet")] };
+  const body = await loadCsv(ctx, "Docs sheet", url);
+  if (body == null) return { rows: [], notes: [loadFailed("Docs sheet")] };
+  const sheet = parseDocs(body);
+  const notes = sheet.notes.slice();
+  if (!sheet.docs.length && !notes.length) notes.push(noRows("Docs sheet"));
+  return { rows: sheet.docs, notes };
 }
 
 function githubHeaders(token: string): HeadersInit {
@@ -99,16 +112,18 @@ async function loadGithub(env: Env, ctx: ExecutionContext): Promise<{ pulls: Pul
 }
 
 export async function loadRaw(env: Env, ctx: ExecutionContext): Promise<RawData> {
-  const [posts, statuses, github] = await Promise.all([
+  const [posts, statuses, github, docs] = await Promise.all([
     loadPosts(env, ctx),
     loadStatus(env, ctx),
     loadGithub(env, ctx),
+    loadDocs(env, ctx),
   ]);
   return {
     posts: posts.rows,
     statuses: statuses.rows,
     pulls: github.pulls,
     commits: github.commits,
-    notes: [...posts.notes, ...statuses.notes, ...github.notes],
+    docs: docs.rows,
+    notes: [...posts.notes, ...statuses.notes, ...github.notes, ...docs.notes],
   };
 }

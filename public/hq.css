@@ -385,6 +385,7 @@ section > p {
 .needs,
 .history,
 .reports,
+.docs,
 .roster {
   list-style: none;
   padding: 0;
@@ -396,7 +397,8 @@ section > p {
 .feed li,
 .needs li,
 .history li,
-.reports li {
+.reports li,
+.docs li {
   border-top: 2px solid #24344f;
   padding-top: 8px;
 }
@@ -404,7 +406,8 @@ section > p {
 .feed li:first-child,
 .needs li:first-child,
 .history li:first-child,
-.reports li:first-child {
+.reports li:first-child,
+.docs li:first-child {
   border-top: 0;
   padding-top: 0;
 }
@@ -432,6 +435,15 @@ section > p {
 
 .k {
   color: var(--gold);
+}
+
+.doc-group {
+  margin-top: 16px;
+}
+
+.docs p {
+  margin: 2px 0 0;
+  color: var(--muted);
 }
 
 .roster {
@@ -491,6 +503,7 @@ footer {
 .needs a,
 .history a,
 .reports a,
+.docs a,
 .roster p {
   overflow-wrap: anywhere;
 }

@@ -31,6 +31,9 @@
     // Columns: timestamp_ct, bot, state, task, link, needs_marc.
     // state is started, finished, blocked, or idle. needs_marc is yes or no.
     "STATUS_CSV_URL": "",
+    // Key docs and sheets inventory tab.
+    // Columns: Name, Link, What it is, Owner bot.
+    "DOCS_CSV_URL": "",
     // JSON object of repo name to bot name. Overrides default GitHub attribution.
     "BOT_REPO_MAP": "{}",
     // Set both to verify Cloudflare Access. Leave both empty to allow everyone.

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { COPY, postureLine } from "../src/copy";
 import { buildDemoRaw } from "../src/demo";
-import { renderBot, renderHome, renderMissing } from "../src/render";
+import { renderBot, renderDocs, renderHome, renderMissing } from "../src/render";
 import { buildModel } from "../src/state";
 import type { RawData } from "../src/types";
 
@@ -55,6 +55,8 @@ describe("dash-free copy", () => {
     expect(html).toContain(">Overview<");
     expect(html).toContain(">Posts<");
     expect(html).toContain(">Team<");
+    expect(html).toContain(">Docs<");
+    expect(html).toContain('href="/docs?demo=1"');
     expect(html).toContain("Live feed");
     expect(html).toContain("Posts this week");
     expect(html).toContain("Needs you");
@@ -88,6 +90,16 @@ describe("dash-free copy", () => {
     }
     expect(renderBot(page, bob)).toContain("Add the pixel office");
     expect(renderBot(page, bob)).toContain("Lay out the sprite sheet");
+    expect(renderBot(page, bob)).toContain("Bob handbook");
+    expect(renderBot(page, bob)).toContain("https://docs.google.com/document/d/bob-handbook");
+    expect(renderBot(page, bob)).not.toContain("ghp_");
+    const docsPage = renderDocs(page);
+    assertClean(docsPage);
+    expect(docsPage).toContain("Team handbooks folder");
+    expect(docsPage).toContain("Scenic Friends");
+    expect(docsPage).not.toContain("DELETE");
+    expect(docsPage).not.toContain("example.com");
+    expect(docsPage).not.toContain("ghp_");
     const signedIn = buildModel(buildDemoRaw(NOW), NOW, { demo: true, loginEnabled: true });
     expect(renderHome(signedIn)).not.toContain("Login not enabled yet");
   });
@@ -98,7 +110,8 @@ describe("dash-free copy", () => {
       statuses: [],
       pulls: [],
       commits: [],
-      notes: [COPY.postsOff, COPY.statusOff, COPY.githubOff],
+      docs: [],
+      notes: [COPY.postsOff, COPY.statusOff, COPY.docsOff, COPY.githubOff],
     };
     const page = buildModel(data, NOW, { demo: false, loginEnabled: false });
     const html = renderHome(page);
@@ -109,6 +122,10 @@ describe("dash-free copy", () => {
     expect(html).toContain(COPY.nothingWaiting);
     expect(html).toContain(COPY.nothingFinished);
     expect(html).toContain(COPY.postsOff);
+    expect(html).toContain(COPY.docsOff);
+    const docsPage = renderDocs(page);
+    assertClean(docsPage);
+    expect(docsPage).toContain(COPY.docsOff);
     expect(html).toContain(COPY.githubOff);
     expect(html.match(/class="seat idle/g)).toHaveLength(13);
     const missing = renderMissing(page, true);
@@ -128,6 +145,7 @@ describe("dash-free copy", () => {
     expect(config).not.toContain("GITHUB_TOKEN");
     expect(config).toContain('"POSTS_CSV_URL"');
     expect(config).toContain('"STATUS_CSV_URL"');
+    expect(config).toContain('"DOCS_CSV_URL"');
     expect(config).not.toContain("POSTLOG_CSV_URLS");
     expect(config).not.toContain("SAVENELLO_CSV_URL");
   });

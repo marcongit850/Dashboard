@@ -12,7 +12,7 @@ import {
 } from "./copy";
 import { safeUrl } from "./html";
 import { formatCt, startOfWeekCt, TWO_HOURS_MS, DAY_MS, WEEKDAY_LABELS, weekDayIndex, withinHours } from "./time";
-import type { Commit, Post, Pull, RawData, StatusRow } from "./types";
+import type { Commit, DocLink, Post, Pull, RawData, StatusRow } from "./types";
 
 export type FeedItem = { at: Date; text: string; href: string };
 export type NeedItem = { title: string; detail: string; href: string };
@@ -43,6 +43,7 @@ export type DashboardModel = {
   feed: FeedItem[];
   week: { label: string; count: number }[];
   needs: NeedItem[];
+  docs: DocLink[];
 };
 
 function latestRow(rows: StatusRow[], state?: StatusRow["state"]): StatusRow | null {
@@ -217,6 +218,7 @@ export function buildModel(
       .slice(0, 10),
     week: WEEKDAY_LABELS.map((label, index) => ({ label, count: counts[index] ?? 0 })),
     needs: [...botNeeds.map((item) => item.item), ...prNeeds.map((item) => item.item)],
+    docs: data.docs,
   };
 }
 

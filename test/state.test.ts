@@ -10,7 +10,7 @@ import type { Post, Pull, RawData, StatusRow } from "../src/types";
 const NOW = new Date("2026-10-14T20:00:00.000Z");
 
 function raw(partial: Partial<RawData> = {}): RawData {
-  return { posts: [], statuses: [], pulls: [], commits: [], notes: [], ...partial };
+  return { posts: [], statuses: [], pulls: [], commits: [], docs: [], notes: [], ...partial };
 }
 
 function post(at: Date, botId: string, topic: string): Post {

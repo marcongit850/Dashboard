@@ -1,7 +1,9 @@
 import { COPY } from "./copy";
+import { groupDocs, handbookFor, otherDocsFor } from "./docs";
 import { escapeHtml } from "./html";
 import { characterSvg, roomSvg, SEATS } from "./office";
 import { type BotCard, type DashboardModel, type FeedItem, type NeedItem } from "./state";
+import type { DocLink } from "./types";
 import { formatCt } from "./time";
 
 function href(path: string, demo: boolean, hash = ""): string {
@@ -11,13 +13,14 @@ function href(path: string, demo: boolean, hash = ""): string {
 
 function header(demo: boolean, clock: string): string {
   const links = [
-    ["overview", COPY.overview],
-    ["posts", COPY.posts],
-    ["team", COPY.team],
-  ] as const;
+    [href("/", demo, "#overview"), COPY.overview],
+    [href("/", demo, "#posts"), COPY.posts],
+    [href("/", demo, "#team"), COPY.team],
+    [href("/docs", demo), COPY.docs],
+  ];
   return `<header class="top"><div class="bar">
     <h1><a class="logo" href="${href("/", demo)}">${COPY.title}</a></h1>
-    <nav class="nav">${links.map(([id, label]) => `<a href="${href("/", demo, `#${id}`)}">${label}</a>`).join("")}</nav>
+    <nav class="nav">${links.map(([path, label]) => `<a href="${path}">${label}</a>`).join("")}</nav>
     <p class="clock">${escapeHtml(clock)}</p>
   </div></header>`;
 }
@@ -66,6 +69,16 @@ function seat(card: BotCard, demo: boolean, linked: boolean, slot?: { x: string;
   const inner = `${bubble}${actor}${tag}`;
   if (!linked) return `<div class="seat portrait ${pose}${alert}"${place}>${inner}</div>`;
   return `<a class="seat ${pose}${alert}"${place} href="${href(`/bot/${card.slug}`, demo)}" aria-label="${escapeHtml(label)}">${inner}</a>`;
+}
+
+function docItem(doc: DocLink): string {
+  const about = doc.about ? `<p>${escapeHtml(doc.about)}</p>` : "";
+  return `<li><a href="${escapeHtml(doc.url)}" rel="noreferrer noopener">${escapeHtml(doc.name)}</a>${about}</li>`;
+}
+
+function docList(docs: DocLink[], empty: string): string {
+  if (!docs.length) return `<p class="empty">${empty}</p>`;
+  return `<ul class="docs">${docs.map(docItem).join("")}</ul>`;
 }
 
 function eventList(items: FeedItem[], empty: string, className: string): string {
@@ -146,6 +159,8 @@ export function renderHome(model: DashboardModel): string {
 }
 
 export function renderBot(model: DashboardModel, card: BotCard): string {
+  const handbook = handbookFor(model.docs, card.id);
+  const others = otherDocsFor(model.docs, card.id, handbook);
   const history = card.history.length
     ? eventList(card.history, COPY.noHistory, "history")
     : `<p class="empty">${COPY.noHistory}</p>`;
@@ -169,8 +184,25 @@ export function renderBot(model: DashboardModel, card: BotCard): string {
   <section>
     <h2>${COPY.reports}</h2>
     ${reports}
+  </section>
+  <section>
+    <h2>${COPY.handbook}</h2>
+    ${handbook ? docList([handbook], COPY.noHandbook) : `<p class="empty">${COPY.noHandbook}</p>`}
+  </section>
+  <section>
+    <h2>${COPY.docs}</h2>
+    ${docList(others, handbook ? COPY.noOtherDocs : COPY.noDocs)}
   </section>`;
   return shell(model, `${card.name}, ${COPY.title}`, main);
+}
+
+export function renderDocs(model: DashboardModel): string {
+  const groups = groupDocs(model.docs);
+  const body = groups.length
+    ? groups.map((group) => `<section class="doc-group"><h3>${escapeHtml(group.label)}</h3>${docList(group.docs, COPY.noDocs)}</section>`).join("")
+    : `<p class="empty">${model.notes.includes(COPY.docsOff) ? COPY.docsOff : COPY.noDocs}</p>`;
+  const main = `<section id="docs"><h2>${COPY.docs}</h2><p>${COPY.docsIntro}</p>${body}</section>`;
+  return shell(model, `${COPY.docs}, ${COPY.title}`, main);
 }
 
 export function renderMissing(model: DashboardModel, missingBot: boolean): string {

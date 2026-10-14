@@ -41,10 +41,19 @@ export type Commit = {
   botId: string;
 };
 
+export type DocLink = {
+  name: string;
+  url: string;
+  about: string;
+  ownerId: string | null;
+  ownerLabel: string;
+};
+
 export type RawData = {
   posts: Post[];
   statuses: StatusRow[];
   pulls: Pull[];
   commits: Commit[];
+  docs: DocLink[];
   notes: string[];
 };
