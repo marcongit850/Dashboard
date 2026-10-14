@@ -203,6 +203,7 @@ section > p {
   width: 100%;
   height: 100%;
   display: block;
+  pointer-events: none;
 }
 
 .office .seat {
@@ -232,6 +233,7 @@ section > p {
   display: flex;
   flex-direction: column;
   align-items: center;
+  cursor: pointer;
 }
 
 .actor {
@@ -501,6 +503,8 @@ section > p {
 }
 
 .posture { margin: 8px 0; }
+
+.job p { max-width: 68ch; }
 
 .back { margin-bottom: 8px; }
 
