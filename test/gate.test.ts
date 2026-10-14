@@ -184,10 +184,12 @@ describe("password gate", () => {
     const candyJs = await worker.fetch(new Request("http://example.com/dash/candy.js"), env, ctx);
     expect(candyJs.status).toBe(200);
     expect(candyJs.headers.get("x-asset-path")).toBe("/candy.js");
-    const candyPng = await worker.fetch(new Request("http://example.com/dash/candy-girl.png"), env, ctx);
-    expect(candyPng.headers.get("x-asset-path")).toBe("/candy-girl.png");
-    const candyWebp = await worker.fetch(new Request("http://example.com/dash/candy-girl.webp"), env, ctx);
-    expect(candyWebp.headers.get("x-asset-path")).toBe("/candy-girl.webp");
+    for (const name of ["candy-torso", "candy-leg-l", "candy-leg-r", "candy-arm-l", "candy-arm-r"]) {
+      const candyPng = await worker.fetch(new Request(`http://example.com/dash/${name}.png`), env, ctx);
+      expect(candyPng.headers.get("x-asset-path")).toBe(`/${name}.png`);
+      const candyWebp = await worker.fetch(new Request(`http://example.com/dash/${name}.webp`), env, ctx);
+      expect(candyWebp.headers.get("x-asset-path")).toBe(`/${name}.webp`);
+    }
 
     const wrong = await login(env, "password=nope&next=/dash");
     expect(wrong.status).toBe(401);
@@ -217,8 +219,11 @@ describe("password gate", () => {
     expect(officeHtml).toContain('href="/dash/logout"');
     expect(officeHtml).toContain("at-12");
     expect(officeHtml).toContain('src="/dash/candy.js"');
-    expect(officeHtml).toContain('src="/dash/candy-girl.png"');
-    expect(officeHtml).toContain('srcset="/dash/candy-girl.webp"');
+    expect(officeHtml).toContain('src="/dash/candy-torso.png"');
+    expect(officeHtml).toContain('srcset="/dash/candy-torso.webp"');
+    expect(officeHtml).toContain('src="/dash/candy-arm-l.png"');
+    expect(officeHtml).toContain('src="/dash/candy-arm-r.png"');
+    expect(officeHtml).not.toContain("candy-girl");
     expect(officeHtml).not.toMatch(/style="/);
     expect(office.headers.get("content-security-policy")).toContain("script-src 'self'");
     expect(office.headers.get("content-security-policy")).toContain("style-src 'self'");

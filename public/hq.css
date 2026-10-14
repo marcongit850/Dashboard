@@ -618,6 +618,12 @@ footer {
   .seat:hover .toon,
   .seat:focus-visible .toon,
   .walker .motion,
+  .walker.walking .motion,
+  .walker.hop .motion,
+  .walker.shrug .motion,
+  .walker .leg,
+  .walker.walking .leg-l,
+  .walker.walking .leg-r,
   .candy-pop {
     animation: none;
     transform: none;
@@ -803,11 +809,68 @@ footer {
 .walker.depth-4 { z-index: 4; }
 
 .walker .turn,
+.walker .motion,
 .walker picture,
 .walker .sprite {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.walker .motion {
+  position: relative;
+}
+
+.walker .leg,
+.walker .arm {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.walker .leg { z-index: 0; }
+.walker .torso { position: relative; z-index: 1; }
+.walker .arm { z-index: 2; }
+
+.leg-l { transform-origin: 36.2% 73.78%; }
+.leg-r { transform-origin: 51.14% 73.73%; }
+.arm-l { transform-origin: 18.4% 32.34%; }
+.arm-r { transform-origin: 80.42% 32.37%; }
+
+.walker .pivot,
+.walker .hand-tip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.arm-l .pivot { left: 18.4%; top: 32.34%; }
+.arm-r .pivot { left: 80.42%; top: 32.37%; }
+.arm-l .hand-tip { left: 8.71%; top: 56.72%; }
+.arm-r .hand-tip { left: 91.16%; top: 57.39%; }
+
+.held-candy {
+  position: absolute;
+  z-index: 3;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-40%, -70%);
+}
+
+.arm-l .held-candy { left: 8.71%; top: 56.72%; }
+.arm-r .held-candy { left: 91.16%; top: 57.39%; }
+.arm.holding .held-candy { opacity: 1; }
+
+.walker.walking .leg-l {
+  animation: leg-swing-l 0.4s ease-in-out infinite;
+}
+
+.walker.walking .leg-r {
+  animation: leg-swing-r 0.4s ease-in-out infinite;
 }
 
 .walker .turn {
@@ -836,7 +899,7 @@ footer {
 }
 
 .walker.hop .motion {
-  animation: candy-hop 0.42s ease-out;
+  animation: candy-hop 0.64s linear;
 }
 
 .walker.shrug .motion {
@@ -848,10 +911,32 @@ footer {
   to { transform: translateY(-4px); }
 }
 
+@keyframes leg-swing-l {
+  0%, 100% { transform: rotate(-22deg); }
+  50% { transform: rotate(22deg); }
+}
+
+@keyframes leg-swing-r {
+  0%, 100% { transform: rotate(22deg); }
+  50% { transform: rotate(-22deg); }
+}
+
 @keyframes candy-hop {
-  0% { transform: translateY(0); }
-  38% { transform: translateY(-16px); }
-  100% { transform: translateY(0); }
+  0% {
+    transform: translateY(0) scale(1, 1);
+    animation-timing-function: cubic-bezier(0.15, 0.7, 0.3, 1);
+  }
+  46% {
+    transform: translateY(-44px) scale(0.97, 1.05);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.45);
+  }
+  80% {
+    transform: translateY(0) scale(1.12, 0.82);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
 }
 
 @keyframes candy-shrug {
@@ -860,21 +945,38 @@ footer {
   70% { transform: rotate(7deg); }
 }
 
-.candy-pop {
+.candy-pop,
+.tossed-candy {
   position: absolute;
   left: 50%;
   top: 34%;
-  z-index: 6;
+  z-index: 9;
   font-size: 22px;
   line-height: 1;
   pointer-events: none;
+}
+
+.candy-pop {
   animation: candy-pop 1.2s ease-out forwards;
+}
+
+.tossed-candy {
+  transform: translate(-50%, -50%);
+}
+
+.tossed-candy.landed {
+  animation: candy-fade 1s linear forwards;
 }
 
 @keyframes candy-pop {
   0% { transform: translate(-50%, 8px) scale(0.35); opacity: 0; }
   28% { transform: translate(-50%, -8px) scale(1.15); opacity: 1; }
   100% { transform: translate(-50%, -30px) scale(0.95); opacity: 0; }
+}
+
+@keyframes candy-fade {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
 }
 
 .seat.thanking {
