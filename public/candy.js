@@ -73,6 +73,19 @@ function officeInView(rect, viewHeight) {
   const RETURN_MS = 280;
   const ARC_MS = 480;
   const FADE_MS = 1000;
+  const SOUND_KEY = "hq-sound";
+  const STEP = 0.2;
+  const LEAD = [76, 79, 84, 79, 81, 79, 76, 74, 72, 76, 79, 84, 83, 81, 79, 76, 77, 81, 84, 81, 79, 76, 74, 72, 74, 76, 79, 81, 79, 76, 74, 72];
+  const BASS = [48, 0, 0, 0, 48, 0, 0, 0, 48, 0, 0, 0, 55, 0, 0, 0, 53, 0, 0, 0, 53, 0, 0, 0, 55, 0, 0, 0, 48, 0, 0, 0];
+  const HARM = [52, 0, 0, 0, 52, 0, 0, 0, 52, 0, 0, 0, 59, 0, 0, 0, 57, 0, 0, 0, 57, 0, 0, 0, 59, 0, 0, 0, 52, 0, 0, 0];
+  const tuneButton = document.querySelector("[data-sound-toggle]");
+  let audioCtx = null;
+  let musicGain = null;
+  let sfxGain = null;
+  let tuneOn = false;
+  let tuneBusy = false;
+  let tuneStep = 0;
+  let tuneAt = 0;
 
   function phone() {
     return window.matchMedia("(max-width: 700px)").matches;
@@ -266,6 +279,7 @@ function officeInView(rect, viewHeight) {
   }
 
   function launchToss(arm, seat) {
+    playPop();
     const hand = pointOf(arm.querySelector(".hand-tip"));
     const seatRect = seat.getBoundingClientRect();
     const officeRect = office.getBoundingClientRect();
@@ -284,6 +298,7 @@ function officeInView(rect, viewHeight) {
   }
 
   function dropOnDesk(seat) {
+    playPop();
     const seatRect = seat.getBoundingClientRect();
     const spot = officePercent(seatRect.left + seatRect.width / 2, seatRect.top + seatRect.height * 0.62);
     const node = document.createElement("span");
@@ -386,10 +401,191 @@ function officeInView(rect, viewHeight) {
     if (!seat || !startHandoff(seat, true)) shrug();
   }
 
+  function midiFreq(note) {
+    return 440 * Math.pow(2, (note - 69) / 12);
+  }
+
+  function soundPref() {
+    try {
+      return localStorage.getItem(SOUND_KEY) === "on";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function saveSoundPref(on) {
+    try {
+      localStorage.setItem(SOUND_KEY, on ? "on" : "off");
+    } catch (err) {
+      return;
+    }
+  }
+
+  function paintSound(on) {
+    if (!tuneButton) return;
+    tuneButton.classList.toggle("is-on", on);
+    tuneButton.setAttribute("aria-pressed", on ? "true" : "false");
+    tuneButton.setAttribute("aria-label", on ? "Turn music off" : "Turn music on");
+  }
+
+  function openContext() {
+    if (audioCtx) return audioCtx;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    audioCtx = new Ctx();
+    sfxGain = audioCtx.createGain();
+    sfxGain.gain.value = 0.42;
+    sfxGain.connect(audioCtx.destination);
+    return audioCtx;
+  }
+
+  function openMusic() {
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.26;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 2100;
+    gain.connect(filter);
+    filter.connect(audioCtx.destination);
+    return gain;
+  }
+
+  function tone(when, note, dur, type, peak, dest) {
+    if (!note || !dest) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(midiFreq(note), when);
+    gain.gain.setValueAtTime(0.0001, when);
+    gain.gain.exponentialRampToValueAtTime(peak, when + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    osc.connect(gain);
+    gain.connect(dest);
+    osc.start(when);
+    osc.stop(when + dur + 0.02);
+    osc.onended = function () {
+      osc.disconnect();
+      gain.disconnect();
+    };
+  }
+
+  function scheduleTune() {
+    if (!tuneOn || !audioCtx || !musicGain || audioCtx.state !== "running") return;
+    const now = audioCtx.currentTime;
+    if (tuneAt < now) tuneAt = now + 0.02;
+    const horizon = now + 0.28;
+    let guard = 0;
+    while (tuneAt < horizon && guard < 6) {
+      tone(tuneAt, LEAD[tuneStep], STEP * 0.7, "square", 0.32, musicGain);
+      if (BASS[tuneStep]) tone(tuneAt, BASS[tuneStep], STEP * 3.3, "triangle", 0.4, musicGain);
+      if (HARM[tuneStep]) tone(tuneAt, HARM[tuneStep], STEP * 3.1, "triangle", 0.14, musicGain);
+      tuneStep = (tuneStep + 1) % LEAD.length;
+      tuneAt += STEP;
+      guard += 1;
+    }
+  }
+
+  function playBoing() {
+    if (!tuneOn || !audioCtx || !sfxGain || audioCtx.state !== "running") return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(720, t + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(380, t + 0.18);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.48, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    osc.connect(gain);
+    gain.connect(sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.28);
+    osc.onended = function () {
+      osc.disconnect();
+      gain.disconnect();
+    };
+  }
+
+  function playPop() {
+    if (!tuneOn || !audioCtx || !sfxGain || audioCtx.state !== "running") return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(620, t);
+    osc.frequency.exponentialRampToValueAtTime(210, t + 0.07);
+    gain.gain.setValueAtTime(0.36, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    osc.connect(gain);
+    gain.connect(sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.09);
+    osc.onended = function () {
+      osc.disconnect();
+      gain.disconnect();
+    };
+  }
+
+  function endTune() {
+    tuneOn = false;
+    if (musicGain) {
+      musicGain.disconnect();
+      musicGain = null;
+    }
+  }
+
+  function beginTune() {
+    const ctx = openContext();
+    if (!ctx) return Promise.resolve(false);
+    let pending;
+    try {
+      pending = ctx.state === "running" ? Promise.resolve() : ctx.resume();
+    } catch (err) {
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(pending).then(function () {
+      if (ctx.state !== "running") return false;
+      if (!musicGain) musicGain = openMusic();
+      tuneOn = true;
+      tuneStep = 0;
+      tuneAt = ctx.currentTime + 0.05;
+      scheduleTune();
+      return true;
+    }, function () {
+      return false;
+    });
+  }
+
+  function onSoundClick() {
+    if (!tuneButton) return;
+    if (tuneBusy) {
+      tuneButton.blur();
+      return;
+    }
+    if (tuneOn) {
+      endTune();
+      saveSoundPref(false);
+      paintSound(false);
+      tuneButton.blur();
+      return;
+    }
+    tuneBusy = true;
+    beginTune().then(function (ok) {
+      tuneBusy = false;
+      if (ok) {
+        saveSoundPref(true);
+        paintSound(true);
+      }
+      if (tuneButton) tuneButton.blur();
+    });
+  }
+
   function jump() {
     if (act && act.arm) return;
     hopUntil = performance.now() + 660;
     root.classList.add("hop");
+    playBoing();
   }
 
   function onKeyDown(event) {
@@ -500,6 +696,7 @@ function officeInView(rect, viewHeight) {
 
     root.classList.toggle("walking", moving && !root.classList.contains("hop"));
     place();
+    scheduleTune();
 
     if (mode === "wander" && now >= nextAuto) {
       const gap = phone() ? 7000 : 11000;
@@ -507,6 +704,15 @@ function officeInView(rect, viewHeight) {
       nextAuto = now + gap + Math.random() * spread;
       const near = nearestSeat();
       if (near) startHandoff(near, false);
+    }
+  }
+
+  if (tuneButton) {
+    tuneButton.addEventListener("click", onSoundClick);
+    if (soundPref()) {
+      beginTune().then(function (ok) {
+        if (ok) paintSound(true);
+      });
     }
   }
 

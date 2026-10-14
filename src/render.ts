@@ -69,6 +69,12 @@ function candyPiece(base: string, name: string): string {
   return `<picture><source srcset="${webp}" type="image/webp"><img class="sprite" src="${png}" alt="" width="180" height="465" decoding="async" draggable="false"></picture>`;
 }
 
+function soundToggle(): string {
+  const on = `<svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 9.1h3.3L11.6 4.8v14.4L6.9 14.9H3.6V9.1z"/><path d="M14.4 8.8a4 4 0 0 1 0 6.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.8 6.5a7 7 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  const off = `<svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 9.1h3.3L11.6 4.8v14.4L6.9 14.9H3.6V9.1z"/><path d="M15.2 9.1l5.2 5.8M20.4 9.1l-5.2 5.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  return `<button type="button" class="sound-toggle" data-sound-toggle aria-pressed="false" aria-label="Turn music on">${on}${off}</button>`;
+}
+
 function candyVisitor(base: string): string {
   const arm = (side: string) => `<div class="arm arm-${side}">${candyPiece(base, `candy-arm-${side}`)}<span class="pivot"></span><span class="hand-tip"></span><span class="held-candy" aria-hidden="true">🍬</span></div>`;
   return `<div class="walker depth-2 face-right" data-candy-walker>
@@ -175,7 +181,7 @@ export function renderHome(model: DashboardModel): string {
     <p>${COPY.floor}</p>
     <p class="legend">${COPY.legend}</p>
     <p class="scroll-hint">${COPY.officeHint}</p>
-    <div class="office-scroll"><div class="office">${roomSvg()}${seats}${candyVisitor(model.basePath)}</div></div>
+    <div class="office-frame">${soundToggle()}<div class="office-scroll"><div class="office">${roomSvg()}${seats}${candyVisitor(model.basePath)}</div></div></div>
   </section>
   <section id="posts">
     <h2>${COPY.posts}</h2>
