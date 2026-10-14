@@ -7,12 +7,18 @@ Team HQ is a private dashboard for Marc's bot team. It shows who is typing, who 
 - Worker name: `dashboard`
 - Config: `wrangler.jsonc`
 - Account: `f1c59948520f1ec39473238b621c7e24`
-- Domain: the `workers.dev` subdomain only (`workers_dev: true`)
-- No custom domain and no route patterns
-- Static files live in `public/` and are served with Workers static assets (`ASSETS`)
-- HTML is rendered by the Worker. CSS and the favicon are static assets. The shared office is original SVG drawn in the page
+- `workers_dev: true` stays on
+- No custom domain on this Worker, and no schedule
+- Path routes, apex host only:
+  - `whatshappeningnetwork.com/dash`
+  - `whatshappeningnetwork.com/dash/*`
+- `BASE_PATH` is `/dash`. Pages, links, assets, login, logout, and redirects all use that prefix. An empty `BASE_PATH` serves at the host root. A request to `/` on `workers.dev` redirects to `/dash`
+- Static files live in `public/` and are served with Workers static assets (`ASSETS`). The browser asks for `/dash/hq.css` and `/dash/favicon.svg`. The Worker strips the prefix before reading the asset
+- HTML is rendered by the Worker. The shared office is original SVG drawn in the page
 
-Cloudflare Access can sit in front of the hostname later. Until `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` are both set, the Worker allows the request and shows "Login not enabled yet".
+`whatshappeningnetwork.com` and `www.whatshappeningnetwork.com` are custom domains on the `whatshappening` Worker. The zone has no other Workers Routes. A route runs before that custom domain for a matching path, so `/dash` can belong to this Worker while the rest of the site stays put. `/dash` on the apex host was a 404, so the route does not replace a live page. The pattern is `/dash` and `/dash/*`, not `dash*`, because `dash*` would also take paths such as `/dashboard` away from the existing site. `www` is not routed. `www.whatshappeningnetwork.com/dash` still hits the `whatshappening` Worker.
+
+The dashboard password is required. If `DASH_PASSWORD` is missing, every path returns 403. Cloudflare Access stays optional. Until `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` are both set, the Worker skips the JWT check and shows "Cloudflare Access is not enabled yet" after the password gate. If only one Access var is set, the Worker returns 403.
 
 ## Data sources
 
@@ -28,6 +34,7 @@ Every bot logs in one workbook, Team HQ Log. Two tabs, two CSV links:
 | `BOT_REPO_MAP` | JSON object of repo name to bot name. |
 | `ACCESS_AUD` | Cloudflare Access application AUD tag. |
 | `ACCESS_TEAM_DOMAIN` | Team issuer, for example `https://your-team.cloudflareaccess.com`. |
+| `BASE_PATH` | Path prefix. Set to `/dash`. |
 
 Example posts tab value (one string, the published CSV for that tab):
 
@@ -37,9 +44,9 @@ https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv&gid=POSTS_GID
 
 Posts and status are tabs of the Team HQ Log workbook. Docs is a different workbook. `DOCS_CSV_URL` is only the published Key docs and sheets tab. The Worker requests that exact URL. A redirect is followed only when it keeps the same `gid`. It does not list tabs and it does not request any other gid. That workbook has private tabs.
 
-The bot column on the posts and status tabs is matched to the fixed roster without case sensitivity. Display names: Chief, Bob (Bob The Builder), money-man, Walton, Foody (Foody & Friends), Tango, Tik-Toker, Rank, Outreach, Scout, Warden, Savenello Marketing, Personal Assistant. Bot pages are `/bot/:slug`.
+The bot column on the posts and status tabs is matched to the fixed roster without case sensitivity. Display names: Chief, Bob (Bob The Builder), money-man, Walton, Foody (Foody & Friends), Tango, Tik-Toker, Rank, Outreach, Scout, Warden, Savenello Marketing, Personal Assistant. Bot pages are `/dash/bot/:slug`.
 
-`/docs` reads `DOCS_CSV_URL` on the same page load and caches the CSV for about 5 minutes, like the other sheets. Rows are grouped by Owner bot, roster order first, then any other owner names. The name is the link and "What it is" sits under it. A row is skipped when Name contains `DELETE`, or when Link is not an http or https URL on `docs.google.com` or `drive.google.com`. Cells that look like secrets are not rendered. A secret-shaped description is left blank. Each bot page links that bot's handbook (a row whose name contains handbook), or the Team handbooks folder when that bot has none, and lists the bot's other docs. When `DOCS_CSV_URL` is blank the page says "Docs sheet is not connected yet."
+`/dash/docs` reads `DOCS_CSV_URL` on the same page load and caches the CSV for about 5 minutes, like the other sheets. Rows are grouped by Owner bot, roster order first, then any other owner names. The name is the link and "What it is" sits under it. A row is skipped when Name contains `DELETE`, or when Link is not an http or https URL on `docs.google.com` or `drive.google.com`. Cells that look like secrets are not rendered. A secret-shaped description is left blank. Each bot page links that bot's handbook (a row whose name contains handbook), or the Team handbooks folder when that bot has none, and lists the bot's other docs. When `DOCS_CSV_URL` is blank the page says "Docs sheet is not connected yet."
 
 GitHub reads `marcongit850` with a few cached calls: one GraphQL query for the 12 most recently pushed repos (merged PRs, open PRs, recent commits) and one search for open PRs. Attribution:
 
@@ -53,8 +60,10 @@ GitHub reads `marcongit850` with a few cached calls: one GraphQL query for the 1
 Only the secret name is listed here. Do not put the value in git, in `wrangler.jsonc`, or in a var.
 
 - `GITHUB_TOKEN`: read-only fine-grained GitHub token that can read pull requests, contents, and metadata on `marcongit850` repositories. Set it with `npx wrangler secret put GITHUB_TOKEN`.
+- `DASH_PASSWORD`: shared dashboard password. Set it with `npx wrangler secret put DASH_PASSWORD`. Until it is set, the Worker denies every request.
+- `DASH_COOKIE_SECRET`: optional HMAC key for the session cookie. Set it with `npx wrangler secret put DASH_COOKIE_SECRET`. When it is unset, the password is the HMAC key, so changing the password signs out existing sessions.
 
-The token is optional at runtime. If it is missing, GitHub shows as not connected and the rest of the page still renders. It is not in `secrets.required`, because that check would refuse `npx wrangler deploy` before the token exists.
+`GITHUB_TOKEN` is optional at runtime. If it is missing, GitHub shows as not connected and the rest of the page still renders. None of these names are in `secrets.required`, because that check would refuse `npx wrangler deploy` before the values exist. `DASH_PASSWORD` is still required to open the site: a deploy without it answers 403.
 
 Sheet URLs are vars, so anyone who can read the Worker config can see them. Do not hide a credential inside a URL. Publish the tabs, or use a link that is already public to the internet. The Worker fetches server side and cannot use your browser cookies.
 
@@ -72,7 +81,11 @@ Draft, scheduled, skipped, cancelled, failed, idea, planned, and queued rows are
 
 Times are Central Time (`America/Chicago`). A sheet time with no zone is read as Central Time. A trailing `CT`, `CST`, `CDT`, or `Central Time` label means the same.
 
-`?demo=1` renders fixture data and does not call Google or GitHub. It is not an access bypass. If Access is on, the JWT is still required.
+`?demo=1` renders fixture data and does not call Google or GitHub. It is not an access bypass. The password cookie is still required. If Access is on, the JWT is still required.
+
+## Password gate
+
+`/dash/login` is a form. A correct password sets cookie `hq_session`. The cookie is `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/dash`, and `Max-Age` is 7 days. The value is `v1.<expiry>.<hmac>` signed with HMAC-SHA256. The key is `DASH_COOKIE_SECRET`, or `DASH_PASSWORD` when that secret is unset. The password check hashes both sides with SHA-256 and compares the digests in constant time. The signature check is constant time too. Eight wrong passwords from one IP in ten minutes return 429. That limit lives in the isolate, so it is a speed bump, not a global lock. The header has a Log out link to `/dash/logout`, which clears the cookie. CSS and the favicon load without the cookie so the login page can be styled. They do not include team data. A `next` value is accepted only when it stays under `/dash`.
 
 ## Deploy
 
@@ -90,13 +103,15 @@ npm test
 npx wrangler dev
 ```
 
-Open `http://127.0.0.1:8787/?demo=1` for sample data. Put `GITHUB_TOKEN=...` in `.dev.vars` (gitignored) when you want live GitHub data locally.
+Open `http://127.0.0.1:8787/dash/login`. Put `DASH_PASSWORD=...` in `.dev.vars` (gitignored). Add `GITHUB_TOKEN=...` in that same file when you want live GitHub data locally. Sample data, after login: `http://127.0.0.1:8787/dash?demo=1`.
 
 ## Gotchas
 
+- Set `DASH_PASSWORD` or the site stays closed. Do not commit the password.
 - Set both Access vars or neither. If only one is set, the Worker returns 403.
 - `ACCESS_TEAM_DOMAIN` should be the team origin. Certs are read from `{origin}/cdn-cgi/access/certs`. The request must include `Cf-Access-Jwt-Assertion`.
-- `workers.dev` is public until Access is turned on. The in-Worker check is the second lock, not a replacement for Access.
+- The password gate is the lock on `workers.dev` and on `/dash`. Access is an extra check when both Access vars are set. The cookie is `Secure`, so the browser stores it on https and on `http://127.0.0.1`.
+- The route does not cover `www`. It also does not use a `dash*` wildcard.
 - `POSTS_CSV_URL`, `STATUS_CSV_URL`, and `DOCS_CSV_URL` are single https CSV links. `BOT_REPO_MAP` is JSON stored in a string var. Invalid JSON is an empty state, not a crash.
 - `DOCS_CSV_URL` is only the Key docs and sheets tab. Do not add another gid from that workbook. The Worker will not follow a redirect onto a different gid.
 - Doc links are limited to `docs.google.com` and `drive.google.com`. A private sheet still has to be published for the CSV fetch. Do not put a token in a doc title, description, or link. Those cells are dropped.

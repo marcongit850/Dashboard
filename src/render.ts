@@ -2,24 +2,27 @@ import { COPY } from "./copy";
 import { groupDocs, handbookFor, otherDocsFor } from "./docs";
 import { escapeHtml } from "./html";
 import { characterSvg, roomSvg } from "./office";
+import { withBase } from "./paths";
 import { type BotCard, type DashboardModel, type FeedItem, type NeedItem } from "./state";
 import type { DocLink } from "./types";
 import { formatCt } from "./time";
 
-function href(path: string, demo: boolean, hash = ""): string {
-  if (!demo) return `${path}${hash}`;
-  return `${path}?demo=1${hash}`;
+function href(base: string, path: string, demo: boolean, hash = ""): string {
+  const rooted = withBase(base, path);
+  if (!demo) return `${rooted}${hash}`;
+  return `${rooted}?demo=1${hash}`;
 }
 
-function header(demo: boolean, clock: string): string {
+function header(base: string, demo: boolean, clock: string, logout: boolean): string {
   const links = [
-    [href("/", demo, "#overview"), COPY.overview],
-    [href("/", demo, "#posts"), COPY.posts],
-    [href("/", demo, "#team"), COPY.team],
-    [href("/docs", demo), COPY.docs],
+    [href(base, "/", demo, "#overview"), COPY.overview],
+    [href(base, "/", demo, "#posts"), COPY.posts],
+    [href(base, "/", demo, "#team"), COPY.team],
+    [href(base, "/docs", demo), COPY.docs],
   ];
+  if (logout) links.push([href(base, "/logout", false), COPY.logout]);
   return `<header class="top"><div class="bar">
-    <h1><a class="logo" href="${href("/", demo)}">${COPY.title}</a></h1>
+    <h1><a class="logo" href="${href(base, "/", demo)}">${COPY.title}</a></h1>
     <nav class="nav">${links.map(([path, label]) => `<a href="${path}">${label}</a>`).join("")}</nav>
     <p class="clock">${escapeHtml(clock)}</p>
   </div></header>`;
@@ -34,7 +37,8 @@ function notices(model: DashboardModel): string {
   return `${login}${demo}${notes}`;
 }
 
-function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "now" | "notes">, title: string, main: string): string {
+function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "now" | "notes" | "basePath">, title: string, main: string): string {
+  const base = model.basePath;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -43,11 +47,11 @@ function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "now" | "no
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b1220">
 <title>${escapeHtml(title)}</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/hq.css">
+<link rel="icon" href="${withBase(base, "/favicon.svg")}" type="image/svg+xml">
+<link rel="stylesheet" href="${withBase(base, "/hq.css")}">
 </head>
 <body>
-${header(model.demo, formatCt(model.now, true))}
+${header(base, model.demo, formatCt(model.now, true), true)}
 <main>
 ${notices(model as DashboardModel)}
 ${main}
@@ -57,7 +61,7 @@ ${main}
 </html>`;
 }
 
-function seat(card: BotCard, demo: boolean, linked: boolean, index?: number): string {
+function seat(card: BotCard, base: string, demo: boolean, linked: boolean, index?: number): string {
   const pose = card.busy ? "busy" : "idle";
   const alert = card.attention ? " alert" : "";
   const spot = index == null ? "" : ` at-${index}`;
@@ -68,7 +72,7 @@ function seat(card: BotCard, demo: boolean, linked: boolean, index?: number): st
   const label = card.bubble ? `${card.name}, ${card.statusLine}, ${card.bubble}` : `${card.name}, ${card.statusLine}`;
   const inner = `${bubble}${actor}${tag}`;
   if (!linked) return `<div class="seat portrait ${pose}${alert}">${inner}</div>`;
-  return `<a class="seat ${pose}${alert}${spot}" href="${href(`/bot/${card.slug}`, demo)}" aria-label="${escapeHtml(label)}">${inner}</a>`;
+  return `<a class="seat ${pose}${alert}${spot}" href="${href(base, `/bot/${card.slug}`, demo)}" aria-label="${escapeHtml(label)}">${inner}</a>`;
 }
 
 function docItem(doc: DocLink): string {
@@ -128,11 +132,11 @@ function weekChart(days: { label: string; count: number }[]): string {
 }
 
 export function renderHome(model: DashboardModel): string {
-  const seats = model.bots.map((bot, index) => seat(bot, model.demo, true, index)).join("");
+  const seats = model.bots.map((bot, index) => seat(bot, model.basePath, model.demo, true, index)).join("");
   const roster = `<ul class="roster">${model.bots.map((bot) => {
     const pose = bot.busy ? "on" : "off";
     const alert = bot.attention ? " alert" : "";
-    return `<li class="${pose}${alert}"><a href="${href(`/bot/${bot.slug}`, model.demo)}">${escapeHtml(bot.name)}</a><p><span class="k">${COPY.workingNow}:</span> ${escapeHtml(bot.workingNow)}</p><p><span class="k">${COPY.lastFinished}:</span> ${escapeHtml(bot.finishedLine)}</p></li>`;
+    return `<li class="${pose}${alert}"><a href="${href(model.basePath, `/bot/${bot.slug}`, model.demo)}">${escapeHtml(bot.name)}</a><p><span class="k">${COPY.workingNow}:</span> ${escapeHtml(bot.workingNow)}</p><p><span class="k">${COPY.lastFinished}:</span> ${escapeHtml(bot.finishedLine)}</p></li>`;
   }).join("")}</ul>`;
   const main = `<section id="overview">
     <h2>${COPY.overview}</h2>
@@ -167,9 +171,9 @@ export function renderBot(model: DashboardModel, card: BotCard): string {
   const reports = card.reports.length
     ? `<ul class="reports">${card.reports.map((report) => `<li><a href="${escapeHtml(report.href)}" rel="noreferrer noopener">${escapeHtml(report.label)}</a></li>`).join("")}</ul>`
     : `<p class="empty">${COPY.noReports}</p>`;
-  const main = `<p class="back"><a href="${href("/", model.demo)}">${COPY.back}</a></p>
+  const main = `<p class="back"><a href="${href(model.basePath, "/", model.demo)}">${COPY.back}</a></p>
   <div class="bot-hero">
-    ${seat(card, model.demo, false)}
+    ${seat(card, model.basePath, model.demo, false)}
     <div>
       <h2>${escapeHtml(card.name)}</h2>
       <p class="posture">${escapeHtml(card.statusLine)}</p>
@@ -206,10 +210,44 @@ export function renderDocs(model: DashboardModel): string {
 }
 
 export function renderMissing(model: DashboardModel, missingBot: boolean): string {
-  const main = `<section><h2>${missingBot ? COPY.noBot : COPY.notHere}</h2><p class="back"><a href="${href("/", model.demo)}">${COPY.back}</a></p></section>`;
+  const main = `<section><h2>${missingBot ? COPY.noBot : COPY.notHere}</h2><p class="back"><a href="${href(model.basePath, "/", model.demo)}">${COPY.back}</a></p></section>`;
   return shell(model, `${COPY.title}`, main);
 }
 
-export function renderCrash(): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${COPY.title}</title></head><body><h1>${COPY.title}</h1><p>${COPY.crash}</p></body></html>`;
+export function renderLogin(options: { basePath: string; error: string; next: string }): string {
+  const base = options.basePath;
+  const error = options.error ? `<p class="notice">${escapeHtml(options.error)}</p>` : "";
+  const main = `<section class="login">
+    <h2>${COPY.loginTitle}</h2>
+    <p>${COPY.loginPrompt}</p>
+    ${error}
+    <form method="post" action="${escapeHtml(withBase(base, "/login"))}">
+      <input type="hidden" name="next" value="${escapeHtml(options.next)}">
+      <label for="password">${COPY.passwordLabel}</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">${COPY.loginSubmit}</button>
+    </form>
+  </section>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b1220">
+<title>${escapeHtml(COPY.loginTitle)}</title>
+<link rel="icon" href="${withBase(base, "/favicon.svg")}" type="image/svg+xml">
+<link rel="stylesheet" href="${withBase(base, "/hq.css")}">
+</head>
+<body>
+<header class="top"><div class="bar"><h1><span class="logo">${COPY.title}</span></h1></div></header>
+<main>
+${main}
+</main>
+</body>
+</html>`;
+}
+
+export function renderCrash(base = ""): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${COPY.title}</title><link rel="stylesheet" href="${withBase(base, "/hq.css")}"></head><body><h1>${COPY.title}</h1><p>${COPY.crash}</p></body></html>`;
 }

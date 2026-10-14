@@ -5,8 +5,14 @@
   "compatibility_date": "2026-10-14",
   "compatibility_flags": ["nodejs_compat"],
   "account_id": "f1c59948520f1ec39473238b621c7e24",
-  // workers.dev only. No custom domain and no schedule.
+  // workers.dev stays on. No schedule, and no custom domain for this Worker.
+  // Path routes only. The apex custom domain stays on the whatshappening Worker.
+  // These patterns run first for /dash and do not replace the rest of the site.
   "workers_dev": true,
+  "routes": [
+    { "pattern": "whatshappeningnetwork.com/dash", "zone_name": "whatshappeningnetwork.com" },
+    { "pattern": "whatshappeningnetwork.com/dash/*", "zone_name": "whatshappeningnetwork.com" }
+  ],
   "observability": {
     "enabled": true,
     "logs": {
@@ -36,9 +42,11 @@
     "DOCS_CSV_URL": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYmooIL4KTClxzpJUdy2g30OIh4_Dudq7AQF181dZeZA9DS7Tx-fOfIowmVYD4ES8iCmRBV1kRQRYi/pub?single=true&output=csv&gid=1034259486",
     // JSON object of repo name to bot name. Overrides default GitHub attribution.
     "BOT_REPO_MAP": "{}",
-    // Set both to verify Cloudflare Access. Leave both empty to allow everyone.
+    // Set both to verify Cloudflare Access. Leave both empty to skip that check.
     // ACCESS_TEAM_DOMAIN example: https://your-team.cloudflareaccess.com
     "ACCESS_AUD": "",
-    "ACCESS_TEAM_DOMAIN": ""
+    "ACCESS_TEAM_DOMAIN": "",
+    // Public path prefix. The dashboard, login, assets, and links all live under it.
+    "BASE_PATH": "/dash"
   }
 }
