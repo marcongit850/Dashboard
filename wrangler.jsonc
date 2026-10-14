@@ -26,11 +26,11 @@
   "vars": {
     // Team HQ Log workbook, posts tab.
     // Columns: posted_at_ct, bot, site, platform, account, status, topic, post_url, reach, clicks, signups, notes.
-    "POSTS_CSV_URL": "",
+    "POSTS_CSV_URL": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4YQ0rN83UR_XTThxjGrn5r0xdlaOvWw81y82J17xL7rkHfrYgInaGJEGxUr8YbhQz960rsMsVkDgT/pub?single=true&output=csv&gid=1635855641",
     // Team HQ Log workbook, status tab.
     // Columns: timestamp_ct, bot, state, task, link, needs_marc.
     // state is started, finished, blocked, or idle. needs_marc is yes or no.
-    "STATUS_CSV_URL": "",
+    "STATUS_CSV_URL": "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4YQ0rN83UR_XTThxjGrn5r0xdlaOvWw81y82J17xL7rkHfrYgInaGJEGxUr8YbhQz960rsMsVkDgT/pub?single=true&output=csv&gid=0",
     // Key docs and sheets inventory tab.
     // Columns: Name, Link, What it is, Owner bot.
     "DOCS_CSV_URL": "",

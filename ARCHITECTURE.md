@@ -16,7 +16,7 @@ Cloudflare Access can sit in front of the hostname later. Until `ACCESS_AUD` and
 
 ## Data sources
 
-All sheet URLs are plain vars in `wrangler.jsonc`. Leave them blank until the published CSV links are ready. A blank var, bad JSON, or a failed fetch renders an empty state. The page still loads.
+All sheet URLs are plain vars in `wrangler.jsonc`. Posts and status point at the published Team HQ Log tabs. Docs stays blank until that CSV link is ready. A blank var, bad JSON, or a failed fetch renders an empty state. The page still loads.
 
 Every bot logs in one workbook, Team HQ Log. Two tabs, two CSV links:
 
@@ -70,7 +70,7 @@ Sheet URLs are vars, so anyone who can read the Worker config can see them. Do n
 
 Draft, scheduled, skipped, cancelled, failed, idea, planned, and queued rows are hidden. Open pull requests older than 24 hours show under Needs you. A bot is busy when the latest status is `started`, or when a post, merged PR, or commit is within 2 hours. `idle` and `finished` rows do not keep a bot typing. `blocked` or `needs_marc=yes` on the latest row paints the red mark. The bubble uses the current task when the latest status is `started` or `blocked`. Otherwise it uses the latest post topic, merged PR title, or commit subject.
 
-Times are Central Time (`America/Chicago`). A sheet time with no zone is read as Central Time.
+Times are Central Time (`America/Chicago`). A sheet time with no zone is read as Central Time. A trailing `CT`, `CST`, `CDT`, or `Central Time` label means the same.
 
 `?demo=1` renders fixture data and does not call Google or GitHub. It is not an access bypass. If Access is on, the JWT is still required.
 

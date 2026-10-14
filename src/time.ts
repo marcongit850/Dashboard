@@ -114,7 +114,9 @@ export function parseTimestamp(input: string): Date | null {
     const date = new Date(iso);
     return Number.isNaN(date.getTime()) ? null : date;
   }
-  let match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  // "2026-10-14 09:15 CT" is a Central Time wall clock, same as a bare sheet time.
+  const wall = raw.replace(/\s*(?:central time|cst|cdt|ct)\s*$/i, "").trim();
+  let match = wall.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (match) {
     return ctWallToUtc(
       Number(match[1]),
@@ -125,7 +127,7 @@ export function parseTimestamp(input: string): Date | null {
       match[6] ? Number(match[6]) : 0,
     );
   }
-  match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)?)?$/i);
+  match = wall.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)?)?$/i);
   if (!match) return null;
   let hour = match[4] ? Number(match[4]) : 0;
   const ampm = (match[7] ?? "").toUpperCase();
