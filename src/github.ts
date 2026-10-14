@@ -1,5 +1,5 @@
 import { matchBot } from "./bots";
-import { clip } from "./html";
+import { clip, redactSecrets } from "./html";
 import { parseTimestamp } from "./time";
 import type { Commit, Pull } from "./types";
 
@@ -175,6 +175,147 @@ export function parseGraphqlBody(body: string, map: Record<string, string>): Git
     }
   }
   return { merged, open, commits };
+}
+
+export function githubAuthorization(token: string): string {
+  let value = token.trim();
+  let previous = "";
+  while (value && value !== previous) {
+    previous = value;
+    value = value.replace(/^(?:bearer|token)\s+/i, "");
+  }
+  return `Bearer ${value}`;
+}
+
+export function graphqlProblem(body: string): string {
+  try {
+    const json = JSON.parse(body) as unknown;
+    const errors = record(json)?.errors;
+    if (Array.isArray(errors)) {
+      const message = errors
+        .map((item) => text(record(item)?.message))
+        .filter(Boolean)
+        .join(" ");
+      if (message) return clip(redactSecrets(message), 180);
+    }
+  } catch {
+    return "response was not JSON";
+  }
+  return "response had no user";
+}
+
+export function parseRestRepoNames(body: string): string[] | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(body) as unknown;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(json)) return null;
+  const names: string[] = [];
+  for (const item of json) {
+    const name = text(record(item)?.name).trim();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function restPull(row: Record<string, unknown>, repo: string, map: Record<string, string>, mergedAt: Date | null, createdAt: Date): Pull | null {
+  const title = clip(text(row.title), 180);
+  const url = text(row.html_url);
+  const branch = text(record(row.head)?.ref);
+  if (!title || !url) return null;
+  return {
+    repo,
+    title,
+    branch,
+    url,
+    createdAt,
+    mergedAt,
+    botId: attributeBot({ repo, title, branch, map }),
+  };
+}
+
+export function parseRestPulls(body: string, repo: string, map: Record<string, string>, kind: "merged" | "open"): Pull[] | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(body) as unknown;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(json)) return null;
+  const pulls: Pull[] = [];
+  for (const item of json) {
+    const row = record(item);
+    if (!row) continue;
+    const createdAt = parseTimestamp(text(row.created_at));
+    const mergedAt = parseTimestamp(text(row.merged_at));
+    if (!createdAt) continue;
+    if (kind === "merged") {
+      if (!mergedAt) continue;
+      const pull = restPull(row, repo, map, mergedAt, createdAt);
+      if (pull) pulls.push(pull);
+      continue;
+    }
+    const pull = restPull(row, repo, map, null, createdAt);
+    if (pull) pulls.push(pull);
+  }
+  return pulls;
+}
+
+export function parseRestCommits(body: string, repo: string, map: Record<string, string>): Commit[] | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(body) as unknown;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(json)) return null;
+  const commits: Commit[] = [];
+  for (const item of json) {
+    const row = record(item);
+    const commit = record(row?.commit);
+    if (!row || !commit) continue;
+    const message = subject(text(commit.message));
+    const at = parseTimestamp(text(record(commit.committer)?.date)) ?? parseTimestamp(text(record(commit.author)?.date));
+    const url = text(row.html_url);
+    if (!message || !at) continue;
+    commits.push({
+      repo,
+      message,
+      url,
+      at,
+      branch: "",
+      botId: attributeBot({ repo, title: message, branch: "", map }),
+    });
+  }
+  return commits;
+}
+
+export function restHistoryFromRepos(
+  repos: { name: string; closed: string | null; open: string | null; commits: string | null }[],
+  map: Record<string, string>,
+): { work: GithubWork | null; failedRepos: string[] } {
+  const merged: Pull[] = [];
+  const open: Pull[] = [];
+  const commits: Commit[] = [];
+  const failedRepos: string[] = [];
+  let loaded = 0;
+  for (const repo of repos) {
+    const closed = repo.closed == null ? null : parseRestPulls(repo.closed, repo.name, map, "merged");
+    const opened = repo.open == null ? null : parseRestPulls(repo.open, repo.name, map, "open");
+    const history = repo.commits == null ? null : parseRestCommits(repo.commits, repo.name, map);
+    if (!closed && !opened && !history) {
+      failedRepos.push(repo.name);
+      continue;
+    }
+    loaded += 1;
+    if (closed) merged.push(...closed);
+    if (opened) open.push(...opened);
+    if (history) commits.push(...history);
+  }
+  if (repos.length > 0 && loaded === 0) return { work: null, failedRepos };
+  return { work: { merged, open, commits }, failedRepos };
 }
 
 export function parseSearchBody(body: string, map: Record<string, string>): Pull[] | null {

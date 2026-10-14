@@ -64,14 +64,18 @@ describe("CSV parsing", () => {
       "2026-10-14 09:15 CT,money-man,blocked,Budget check,,yes",
       "2026-01-15 13:00,warden,BLOCKED,Hold,,no",
       "2026-01-15 14:00,Nope,idle,Ghost,,y",
+      "2026-10-14 10:00,Walton,working,Draft the recap,,no",
+      "2026-10-14 10:26,Walton,done,File the BCC notes,,no",
     ].join("\n");
     const parsed = parseStatus(csv);
-    expect(parsed.rows).toHaveLength(3);
+    expect(parsed.rows).toHaveLength(5);
     expect(parsed.rows[0]).toMatchObject({ botId: "chief", state: "started", needsMarc: true });
     expect(parsed.rows[0]?.at.toISOString()).toBe("2026-01-15T18:00:00.000Z");
     expect(parsed.rows[1]).toMatchObject({ botId: "money-man", state: "blocked", needsMarc: true });
     expect(parsed.rows[1]?.at.toISOString()).toBe("2026-10-14T14:15:00.000Z");
     expect(parsed.rows[2]).toMatchObject({ botId: "warden", state: "blocked", needsMarc: false });
+    expect(parsed.rows[3]).toMatchObject({ botId: "walton", state: "working" });
+    expect(parsed.rows[4]).toMatchObject({ botId: "walton", state: "finished", task: "File the BCC notes" });
     expect(parsed.notes.some((note) => note.includes("Nope"))).toBe(true);
   });
 });

@@ -11,7 +11,7 @@ export type Post = {
   notes: string;
 };
 
-export type StatusState = "started" | "finished" | "blocked" | "idle" | "unknown";
+export type StatusState = "started" | "working" | "finished" | "blocked" | "idle" | "unknown";
 
 export type StatusRow = {
   at: Date;

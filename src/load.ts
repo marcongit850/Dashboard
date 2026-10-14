@@ -1,14 +1,22 @@
 import "./secrets";
 import { cachedText, digestKey } from "./cache";
-import { COPY, httpsOnly, loadFailed, noRows } from "./copy";
+import { COPY, githubDownNote, githubHistoryFailed, githubSearchFailed, httpsOnly, loadFailed, noRows } from "./copy";
 import {
   GITHUB_OWNER,
   GITHUB_QUERY,
+  githubAuthorization,
+  graphqlProblem,
   parseGraphqlBody,
   parseRepoMap,
+  parseRestCommits,
+  parseRestPulls,
+  parseRestRepoNames,
   parseSearchBody,
+  restHistoryFromRepos,
+  type GithubWork,
 } from "./github";
-import { fetchSheet, fetchText, httpsUrl } from "./http";
+import { fetchSheet, fetchRemote, httpsUrl } from "./http";
+import { clip, redactSecrets } from "./html";
 import { parseDocs } from "./docs";
 import { parsePostLog, parseStatus } from "./sheets";
 import type { Commit, DocLink, Post, Pull, RawData, StatusRow } from "./types";
@@ -59,13 +67,88 @@ async function loadDocs(env: Env, ctx: ExecutionContext): Promise<SourceResult<D
   return { rows: sheet.docs, notes };
 }
 
-function githubHeaders(token: string): HeadersInit {
-  return {
+type GithubAttempt = { status: number; text: string | null; readable: boolean };
+
+function githubHeaders(token: string, json = false): HeadersInit {
+  const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    Authorization: `Bearer ${token}`,
+    Authorization: githubAuthorization(token),
     "User-Agent": "team-hq",
     "X-GitHub-Api-Version": "2022-11-28",
   };
+  if (json) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+function githubPath(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return "/";
+  }
+}
+
+async function githubGet(
+  ctx: ExecutionContext,
+  token: string,
+  url: string,
+  init: { method?: "GET" | "POST"; body?: string },
+  accept: (text: string) => boolean,
+  problem: (text: string) => string,
+): Promise<GithubAttempt> {
+  let status = 0;
+  let readable = true;
+  const key = await digestKey(`${token}\n${init.method ?? "GET"}\n${url}\n${init.body ?? ""}`);
+  const text = await cachedText(ctx, `https://team-hq.internal/v1/github/${key}`, "github", async () => {
+    const remote = await fetchRemote(url, {
+      headers: githubHeaders(token, init.method === "POST"),
+      method: init.method,
+      body: init.body,
+    });
+    status = remote.status;
+    const path = githubPath(url);
+    console.log(JSON.stringify({ event: "github_response", path, status: remote.status }));
+    if (remote.body == null || !accept(remote.body)) {
+      readable = !(remote.body != null && remote.status >= 200 && remote.status < 300);
+      const detail = remote.body ? problem(remote.body) : remote.detail || "no response";
+      console.error(JSON.stringify({
+        event: "github_http_error",
+        path,
+        status: remote.status,
+        detail: clip(redactSecrets(detail), 180),
+      }));
+      return null;
+    }
+    readable = true;
+    return remote.body;
+  });
+  return { status, text, readable };
+}
+
+async function loadRestHistory(
+  ctx: ExecutionContext,
+  token: string,
+  map: Record<string, string>,
+): Promise<{ work: GithubWork | null; status: number; readable: boolean }> {
+  const listUrl = `https://api.github.com/users/${GITHUB_OWNER}/repos?sort=pushed&per_page=12&type=owner`;
+  const list = await githubGet(ctx, token, listUrl, {}, (text) => parseRestRepoNames(text) !== null, () => "unexpected response");
+  if (!list.text) return { work: null, status: list.status, readable: list.readable };
+  const names = parseRestRepoNames(list.text) ?? [];
+  const repos = await Promise.all(names.map(async (name) => {
+    const root = `https://api.github.com/repos/${GITHUB_OWNER}/${encodeURIComponent(name)}`;
+    const [closed, opened, history] = await Promise.all([
+      githubGet(ctx, token, `${root}/pulls?state=closed&sort=updated&direction=desc&per_page=5`, {}, (text) => parseRestPulls(text, name, map, "merged") !== null, () => "unexpected response"),
+      githubGet(ctx, token, `${root}/pulls?state=open&sort=created&direction=asc&per_page=8`, {}, (text) => parseRestPulls(text, name, map, "open") !== null, () => "unexpected response"),
+      githubGet(ctx, token, `${root}/commits?per_page=3`, {}, (text) => parseRestCommits(text, name, map) !== null, () => "unexpected response"),
+    ]);
+    return { name, closed: closed.text, open: opened.text, commits: history.text, attempts: [closed, opened, history] };
+  }));
+  const collected = restHistoryFromRepos(repos, map);
+  if (collected.work) return { work: collected.work, status: 200, readable: true };
+  const attempts = repos.flatMap((repo) => repo.attempts);
+  const httpFail = attempts.find((attempt) => attempt.status < 200 || attempt.status >= 300);
+  const chosen = httpFail ?? attempts[0];
+  return { work: null, status: chosen?.status ?? list.status, readable: chosen?.readable ?? false };
 }
 
 async function loadGithub(env: Env, ctx: ExecutionContext): Promise<{ pulls: Pull[]; commits: Commit[]; notes: string[] }> {
@@ -73,40 +156,44 @@ async function loadGithub(env: Env, ctx: ExecutionContext): Promise<{ pulls: Pul
   const notes = mapResult.error ? [mapResult.error] : [];
   const token = env.GITHUB_TOKEN?.trim() ?? "";
   if (!token) return { pulls: [], commits: [], notes: [...notes, COPY.githubOff] };
-  const hash = await digestKey(token);
-  const headers = githubHeaders(token);
-  const [graphqlBody, searchBody] = await Promise.all([
-    cachedText(ctx, `https://team-hq.internal/v1/github/graphql/${hash}`, "github_graphql", async () => {
-      const text = await fetchText(
-        "https://api.github.com/graphql",
-        { ...headers, "Content-Type": "application/json" },
-        "POST",
-        JSON.stringify({ query: GITHUB_QUERY, variables: { login: GITHUB_OWNER } }),
-      );
-      if (!text || !parseGraphqlBody(text, mapResult.map)) return null;
-      return text;
-    }),
-    cachedText(ctx, `https://team-hq.internal/v1/github/search/${hash}`, "github_search", async () => {
-      const query = `user:${GITHUB_OWNER} is:pr is:open`;
-      const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}&sort=created&order=asc&per_page=50`;
-      const text = await fetchText(url, headers);
-      if (!text || !parseSearchBody(text, mapResult.map)) return null;
-      return text;
-    }),
-  ]);
-  const graphql = graphqlBody ? parseGraphqlBody(graphqlBody, mapResult.map) : null;
-  const search = searchBody ? parseSearchBody(searchBody, mapResult.map) : null;
-  if (!graphql && !search) return { pulls: [], commits: [], notes: [...notes, COPY.githubDown] };
-  if (!graphql) notes.push(COPY.githubHistoryDown);
-  if (!search) notes.push(COPY.githubSearchDown);
+  const query = `user:${GITHUB_OWNER} is:pr is:open`;
+  const searchUrl = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}&sort=created&order=asc&per_page=50`;
+  const graphqlUrl = "https://api.github.com/graphql";
+  const graphqlBody = JSON.stringify({ query: GITHUB_QUERY, variables: { login: GITHUB_OWNER } });
+  const searchPromise = githubGet(ctx, token, searchUrl, {}, (text) => parseSearchBody(text, mapResult.map) !== null, () => "unexpected response");
+  const graphql = await githubGet(
+    ctx,
+    token,
+    graphqlUrl,
+    { method: "POST", body: graphqlBody },
+    (text) => parseGraphqlBody(text, mapResult.map) !== null,
+    graphqlProblem,
+  );
+  let work = graphql.text ? parseGraphqlBody(graphql.text, mapResult.map) : null;
+  let historyStatus = graphql.status;
+  let historyReadable = graphql.readable;
+  if (!work) {
+    const rest = await loadRestHistory(ctx, token, mapResult.map);
+    work = rest.work;
+    historyStatus = rest.status;
+    historyReadable = rest.readable;
+  }
+  const searchAttempt = await searchPromise;
+  const search = searchAttempt.text ? parseSearchBody(searchAttempt.text, mapResult.map) : null;
+  if (!work && !search) {
+    notes.push(githubDownNote(historyStatus, searchAttempt.status));
+  } else {
+    if (!work) notes.push(githubHistoryFailed(historyStatus, historyReadable));
+    if (!search) notes.push(githubSearchFailed(searchAttempt.status, searchAttempt.readable));
+  }
   const open = new Map<string, Pull>();
-  for (const pull of graphql?.open ?? []) open.set(pull.url, pull);
+  for (const pull of work?.open ?? []) open.set(pull.url, pull);
   for (const pull of search ?? []) {
     if (!open.has(pull.url)) open.set(pull.url, pull);
   }
   return {
-    pulls: [...(graphql?.merged ?? []), ...open.values()],
-    commits: graphql?.commits ?? [],
+    pulls: [...(work?.merged ?? []), ...open.values()],
+    commits: work?.commits ?? [],
     notes,
   };
 }

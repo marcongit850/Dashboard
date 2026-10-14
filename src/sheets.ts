@@ -99,7 +99,9 @@ export function parsePostLog(csv: string, source = "Posts"): { posts: Post[]; no
 
 function parseState(value: string): StatusState {
   const state = value.trim().toLowerCase();
-  if (state === "started" || state === "finished" || state === "blocked" || state === "idle") return state;
+  if (state === "started" || state === "working") return state;
+  if (state === "finished" || state === "done") return "finished";
+  if (state === "blocked" || state === "idle") return state;
   return "unknown";
 }
 

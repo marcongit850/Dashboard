@@ -68,6 +68,26 @@ export const COPY = {
   footer: "Team HQ loads data when you open a page. It does not refresh on its own.",
 } as const;
 
+function httpCode(status: number): string {
+  return status > 0 ? `HTTP ${status}` : "no response";
+}
+
+export function githubHistoryFailed(status: number, readable = true): string {
+  if (status >= 200 && status < 300 && !readable) return "GitHub history returned a response that could not be read.";
+  if (status > 0) return `GitHub history could not be loaded (${httpCode(status)}).`;
+  return COPY.githubHistoryDown;
+}
+
+export function githubSearchFailed(status: number, readable = true): string {
+  if (status >= 200 && status < 300 && !readable) return "GitHub open PR search returned a response that could not be read.";
+  if (status > 0) return `GitHub open PR search could not be loaded (${httpCode(status)}).`;
+  return COPY.githubSearchDown;
+}
+
+export function githubDownNote(historyStatus: number, searchStatus: number): string {
+  return `${COPY.githubDown} History ${httpCode(historyStatus)}. Search ${httpCode(searchStatus)}.`;
+}
+
 export function postEvent(display: string, platform: string, place: string, topic: string): string {
   if (topic && platform) return `${display} posted on ${platform}: ${topic}`;
   if (topic && place) return `${display} posted in ${place}: ${topic}`;

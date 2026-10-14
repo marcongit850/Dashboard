@@ -118,7 +118,7 @@ export default {
     const now = new Date();
     try {
       const raw = demo ? buildDemoRaw(now) : await loadRaw(env, ctx);
-      const model = buildModel(raw, now, { demo, loginEnabled: auth.loginEnabled, basePath: base });
+      const model = buildModel(raw, now, { demo, loginEnabled: auth.loginEnabled, basePath: base, passwordGate: true });
       if (logical === "/") {
         console.log(JSON.stringify({ event: "page", path: withBase(base, "/"), demo, ms: Date.now() - started, notes: model.notes.length }));
         return html(renderHome(model));
