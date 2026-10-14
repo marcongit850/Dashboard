@@ -1,7 +1,7 @@
 import { COPY } from "./copy";
 import { groupDocs, handbookFor, otherDocsFor } from "./docs";
 import { escapeHtml } from "./html";
-import { characterSvg, roomSvg, SEATS } from "./office";
+import { characterSvg, roomSvg } from "./office";
 import { type BotCard, type DashboardModel, type FeedItem, type NeedItem } from "./state";
 import type { DocLink } from "./types";
 import { formatCt } from "./time";
@@ -57,18 +57,18 @@ ${main}
 </html>`;
 }
 
-function seat(card: BotCard, demo: boolean, linked: boolean, slot?: { x: string; y: string; z: number }): string {
+function seat(card: BotCard, demo: boolean, linked: boolean, index?: number): string {
   const pose = card.busy ? "busy" : "idle";
   const alert = card.attention ? " alert" : "";
+  const spot = index == null ? "" : ` at-${index}`;
   const bubble = card.bubble ? `<p class="bubble">${escapeHtml(card.bubble)}</p>` : "";
   const bang = card.attention ? `<span class="bang"><span class="sr">${COPY.needsMarc}</span>!</span>` : "";
   const actor = `<span class="actor">${characterSvg(card.look, card.busy ? "type" : "lean")}${bang}</span>`;
   const tag = `<span class="tag"><span class="dot" aria-hidden="true"></span>${escapeHtml(card.name)}</span>`;
   const label = card.bubble ? `${card.name}, ${card.statusLine}, ${card.bubble}` : `${card.name}, ${card.statusLine}`;
-  const place = slot ? ` style="--x:${slot.x};--y:${slot.y};--z:${slot.z}"` : "";
   const inner = `${bubble}${actor}${tag}`;
-  if (!linked) return `<div class="seat portrait ${pose}${alert}"${place}>${inner}</div>`;
-  return `<a class="seat ${pose}${alert}"${place} href="${href(`/bot/${card.slug}`, demo)}" aria-label="${escapeHtml(label)}">${inner}</a>`;
+  if (!linked) return `<div class="seat portrait ${pose}${alert}">${inner}</div>`;
+  return `<a class="seat ${pose}${alert}${spot}" href="${href(`/bot/${card.slug}`, demo)}" aria-label="${escapeHtml(label)}">${inner}</a>`;
 }
 
 function docItem(doc: DocLink): string {
@@ -128,7 +128,7 @@ function weekChart(days: { label: string; count: number }[]): string {
 }
 
 export function renderHome(model: DashboardModel): string {
-  const seats = model.bots.map((bot, index) => seat(bot, model.demo, true, SEATS[index])).join("");
+  const seats = model.bots.map((bot, index) => seat(bot, model.demo, true, index)).join("");
   const roster = `<ul class="roster">${model.bots.map((bot) => {
     const pose = bot.busy ? "on" : "off";
     const alert = bot.attention ? " alert" : "";

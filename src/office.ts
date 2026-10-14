@@ -1,24 +1,5 @@
 import type { Hat, Look } from "./bots";
 
-export type SeatSlot = { x: string; y: string; z: number };
-
-// One open room. Back row under the windows, then two rows closer to the door.
-export const SEATS: SeatSlot[] = [
-  { x: "10%", y: "37%", z: 1 },
-  { x: "28%", y: "37%", z: 1 },
-  { x: "50%", y: "37%", z: 1 },
-  { x: "72%", y: "37%", z: 1 },
-  { x: "90%", y: "37%", z: 1 },
-  { x: "16%", y: "64%", z: 2 },
-  { x: "38%", y: "64%", z: 2 },
-  { x: "62%", y: "64%", z: 2 },
-  { x: "84%", y: "64%", z: 2 },
-  { x: "16%", y: "92%", z: 3 },
-  { x: "38%", y: "92%", z: 3 },
-  { x: "62%", y: "92%", z: 3 },
-  { x: "84%", y: "92%", z: 3 },
-];
-
 function hatArt(hat: Hat, color: string): string {
   if (hat === "crown") {
     return `<path d="M44 30l5-12 7 8 4-12 4 12 7-8 5 12z" fill="${color}"/>`;

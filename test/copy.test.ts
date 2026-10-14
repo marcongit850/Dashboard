@@ -66,6 +66,11 @@ describe("dash-free copy", () => {
     expect(html).toContain('id="posts"');
     expect(html).toContain('id="team"');
     expect(html.match(/class="seat /g)).toHaveLength(13);
+    expect(html).toContain("at-12");
+    expect(html).not.toContain("style=\"--x");
+    for (const name of ["Chief", "Bob", "Outreach", "Walton", "Tik-Toker", "Rank", "Warden", "Scout", "Foody", "Savenello Marketing", "Personal Assistant", "money-man", "Tango"]) {
+      expect(html).toContain(name);
+    }
     expect(html).toContain('class="office"');
     expect(html).not.toContain('class="pixel"');
     expect(html).toContain('href="/bot/chief?demo=1"');

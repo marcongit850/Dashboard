@@ -207,12 +207,24 @@ section > p {
 
 .office .seat {
   position: absolute;
-  left: var(--x);
-  top: var(--y);
-  z-index: var(--z);
   width: 136px;
   transform: translate(-50%, -100%);
 }
+
+/* Seat spots live in the stylesheet. Inline styles are blocked by the page policy. */
+.office .at-0 { left: 10%; top: 37%; z-index: 1; }
+.office .at-1 { left: 28%; top: 37%; z-index: 1; }
+.office .at-2 { left: 50%; top: 37%; z-index: 1; }
+.office .at-3 { left: 72%; top: 37%; z-index: 1; }
+.office .at-4 { left: 90%; top: 37%; z-index: 1; }
+.office .at-5 { left: 16%; top: 64%; z-index: 2; }
+.office .at-6 { left: 38%; top: 64%; z-index: 2; }
+.office .at-7 { left: 62%; top: 64%; z-index: 2; }
+.office .at-8 { left: 84%; top: 64%; z-index: 2; }
+.office .at-9 { left: 16%; top: 92%; z-index: 3; }
+.office .at-10 { left: 38%; top: 92%; z-index: 3; }
+.office .at-11 { left: 62%; top: 92%; z-index: 3; }
+.office .at-12 { left: 84%; top: 92%; z-index: 3; }
 
 .seat {
   color: inherit;
