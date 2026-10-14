@@ -9,6 +9,7 @@ import type { RawData } from "../src/types";
 
 const NOW = new Date("2026-10-14T20:00:00.000Z");
 const BAD = /[\u2013\u2014]|&mdash;|&ndash;|&#8211;|&#8212;|&#x2013;|&#x2014;/i;
+const TEXT_EXT = new Set([".css", ".svg", ".js", ".md", ".json", ".jsonc", ".ts", ".html", ".txt"]);
 
 function assertClean(value: string) {
   expect(value.match(BAD)).toBeNull();
@@ -42,10 +43,14 @@ describe("dash-free copy", () => {
       "ARCHITECTURE.md",
       "wrangler.jsonc",
     ];
-    for (const file of files) assertClean(readFileSync(file, "utf8"));
+    for (const file of files) {
+      const dot = file.lastIndexOf(".");
+      if (dot < 0 || !TEXT_EXT.has(file.slice(dot).toLowerCase())) continue;
+      assertClean(readFileSync(file, "utf8"));
+    }
   });
 
-  it("renders the demo office without scripts or refresh", () => {
+  it("renders the demo office without a refresh", () => {
     const page = buildModel(buildDemoRaw(NOW), NOW, { demo: true, loginEnabled: false });
     const html = renderHome(page);
     assertClean(html);
@@ -78,7 +83,12 @@ describe("dash-free copy", () => {
     expect(html).toContain('class="bang"');
     expect(html).toContain("Beach flags are up");
     expect(html).toContain("Budget draft");
-    expect(html.toLowerCase()).not.toContain("<script");
+    expect(html).toContain('data-candy-walker');
+    expect(html).toContain('src="/candy-girl.png"');
+    expect(html).toContain('srcset="/candy-girl.webp"');
+    expect(html).toContain('src="/candy.js"');
+    expect(html).not.toMatch(/<script(?![^>]*\ssrc=)/);
+    expect(html).not.toMatch(/style="/);
     expect(html.toLowerCase()).not.toContain("http-equiv=\"refresh\"");
     expect(html).not.toContain("setInterval");
     expect(html).not.toContain("setTimeout");
@@ -98,6 +108,8 @@ describe("dash-free copy", () => {
     expect(renderBot(page, bob)).toContain("Bob handbook");
     expect(renderBot(page, bob)).toContain("https://docs.google.com/document/d/bob-handbook");
     expect(renderBot(page, bob)).not.toContain("ghp_");
+    expect(renderBot(page, bob)).not.toContain("candy.js");
+    expect(renderBot(page, bob)).not.toContain("data-candy-walker");
     const docsPage = renderDocs(page);
     assertClean(docsPage);
     expect(docsPage).toContain("Team handbooks folder");

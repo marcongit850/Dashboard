@@ -172,12 +172,22 @@ describe("password gate", () => {
     expect(formHtml).toContain('href="/dash/hq.css"');
     expect(formHtml).toContain('name="password"');
     expect(formHtml).not.toContain("<script");
+    expect(form.headers.get("content-security-policy")).toContain("script-src 'self'");
+    expect(form.headers.get("content-security-policy")).not.toContain("unsafe-inline");
     expect(formHtml).not.toContain("Chief");
     expect(renderLogin({ basePath: "/dash", error: COPY.loginWrong, next: "/dash" })).toContain(COPY.loginWrong);
 
     const css = await worker.fetch(new Request("http://example.com/dash/hq.css"), env, ctx);
     expect(css.status).toBe(200);
     expect(css.headers.get("x-asset-path")).toBe("/hq.css");
+
+    const candyJs = await worker.fetch(new Request("http://example.com/dash/candy.js"), env, ctx);
+    expect(candyJs.status).toBe(200);
+    expect(candyJs.headers.get("x-asset-path")).toBe("/candy.js");
+    const candyPng = await worker.fetch(new Request("http://example.com/dash/candy-girl.png"), env, ctx);
+    expect(candyPng.headers.get("x-asset-path")).toBe("/candy-girl.png");
+    const candyWebp = await worker.fetch(new Request("http://example.com/dash/candy-girl.webp"), env, ctx);
+    expect(candyWebp.headers.get("x-asset-path")).toBe("/candy-girl.webp");
 
     const wrong = await login(env, "password=nope&next=/dash");
     expect(wrong.status).toBe(401);
@@ -206,6 +216,12 @@ describe("password gate", () => {
     expect(officeHtml).toContain('href="/dash/hq.css"');
     expect(officeHtml).toContain('href="/dash/logout"');
     expect(officeHtml).toContain("at-12");
+    expect(officeHtml).toContain('src="/dash/candy.js"');
+    expect(officeHtml).toContain('src="/dash/candy-girl.png"');
+    expect(officeHtml).toContain('srcset="/dash/candy-girl.webp"');
+    expect(officeHtml).not.toMatch(/style="/);
+    expect(office.headers.get("content-security-policy")).toContain("script-src 'self'");
+    expect(office.headers.get("content-security-policy")).toContain("style-src 'self'");
     expect(officeHtml).not.toContain(COPY.loginNotice);
 
     const docs = await worker.fetch(new Request("http://example.com/dash/docs?demo=1", {

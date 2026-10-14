@@ -38,7 +38,7 @@ function notices(model: Pick<DashboardModel, "loginEnabled" | "passwordGate" | "
   return `${login}${demo}${notes}`;
 }
 
-function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "passwordGate" | "now" | "notes" | "basePath">, title: string, main: string): string {
+function shell(model: Pick<DashboardModel, "demo" | "loginEnabled" | "passwordGate" | "now" | "notes" | "basePath">, title: string, main: string, tail = ""): string {
   const base = model.basePath;
   return `<!doctype html>
 <html lang="en">
@@ -58,8 +58,21 @@ ${notices(model)}
 ${main}
 </main>
 <footer><p>${COPY.footer}</p></footer>
+${tail}
 </body>
 </html>`;
+}
+
+function candyVisitor(base: string): string {
+  const png = withBase(base, "/candy-girl.png");
+  const webp = withBase(base, "/candy-girl.webp");
+  return `<div class="walker depth-2 face-right" data-candy-walker>
+    <p class="sr">A visitor with a candy tray walks the office. Arrow keys move her. Space jumps. Enter gives candy to a nearby bot.</p>
+    <div class="turn"><div class="motion"><picture>
+      <source srcset="${webp}" type="image/webp">
+      <img class="sprite" src="${png}" alt="" width="180" height="465" decoding="async" draggable="false">
+    </picture></div></div>
+  </div>`;
 }
 
 function seat(card: BotCard, base: string, demo: boolean, linked: boolean, index?: number): string {
@@ -154,7 +167,7 @@ export function renderHome(model: DashboardModel): string {
     <p>${COPY.floor}</p>
     <p class="legend">${COPY.legend}</p>
     <p class="scroll-hint">${COPY.officeHint}</p>
-    <div class="office-scroll"><div class="office">${roomSvg()}${seats}</div></div>
+    <div class="office-scroll"><div class="office">${roomSvg()}${seats}${candyVisitor(model.basePath)}</div></div>
   </section>
   <section id="posts">
     <h2>${COPY.posts}</h2>
@@ -170,7 +183,8 @@ export function renderHome(model: DashboardModel): string {
     <p>${COPY.teamIntro}</p>
     ${roster}
   </section>`;
-  return shell(model, COPY.title, main);
+  const script = `<script src="${withBase(model.basePath, "/candy.js")}" defer></script>`;
+  return shell(model, COPY.title, main, script);
 }
 
 export function renderBot(model: DashboardModel, card: BotCard): string {

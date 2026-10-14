@@ -27,7 +27,7 @@ const HTML: HeadersInit = {
   "cache-control": "private, no-store",
   "x-content-type-options": "nosniff",
   "referrer-policy": "same-origin",
-  "content-security-policy": "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  "content-security-policy": "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   "x-frame-options": "DENY",
 };
 
@@ -44,11 +44,13 @@ function html(body: string, status = 200, extra: HeadersInit = {}): Response {
   return new Response(body, { status, headers });
 }
 
+const PUBLIC_FILES = new Set(["/hq.css", "/candy.js", "/candy-girl.png", "/candy-girl.webp"]);
+
 function assetRequest(logical: string, url: URL): Request | null {
   if (logical === "/favicon.ico" || logical === "/favicon.svg") {
     return new Request(new URL("/favicon.svg", url.origin));
   }
-  if (logical === "/hq.css") return new Request(new URL("/hq.css", url.origin));
+  if (PUBLIC_FILES.has(logical)) return new Request(new URL(logical, url.origin));
   return null;
 }
 

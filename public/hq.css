@@ -616,7 +616,9 @@ footer {
   .busy .keys,
   .idle .steam,
   .seat:hover .toon,
-  .seat:focus-visible .toon {
+  .seat:focus-visible .toon,
+  .walker .motion,
+  .candy-pop {
     animation: none;
     transform: none;
   }
@@ -780,5 +782,137 @@ footer {
   .roster li {
     min-width: 0;
     max-width: 100%;
+  }
+}
+
+/* Candy walks the floor. Her spot is set from candy.js (the style attribute is blocked). */
+.walker {
+  position: absolute;
+  left: 48%;
+  top: 72%;
+  width: 68px;
+  z-index: 2;
+  margin: 0;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+
+.walker.depth-1 { z-index: 1; }
+.walker.depth-2 { z-index: 2; }
+.walker.depth-3 { z-index: 3; }
+.walker.depth-4 { z-index: 4; }
+
+.walker .turn,
+.walker picture,
+.walker .sprite {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.walker .turn {
+  position: relative;
+  transform-origin: center bottom;
+}
+
+.walker.face-left .turn {
+  transform: scaleX(-1);
+}
+
+.walker .turn::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 1px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.walker.walking .motion {
+  animation: candy-bob 0.32s ease-in-out infinite alternate;
+}
+
+.walker.hop .motion {
+  animation: candy-hop 0.42s ease-out;
+}
+
+.walker.shrug .motion {
+  animation: candy-shrug 0.48s ease-in-out;
+}
+
+@keyframes candy-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+
+@keyframes candy-hop {
+  0% { transform: translateY(0); }
+  38% { transform: translateY(-16px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes candy-shrug {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(-8deg); }
+  70% { transform: rotate(7deg); }
+}
+
+.candy-pop {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  z-index: 6;
+  font-size: 22px;
+  line-height: 1;
+  pointer-events: none;
+  animation: candy-pop 1.2s ease-out forwards;
+}
+
+@keyframes candy-pop {
+  0% { transform: translate(-50%, 8px) scale(0.35); opacity: 0; }
+  28% { transform: translate(-50%, -8px) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -30px) scale(0.95); opacity: 0; }
+}
+
+.seat.thanking {
+  z-index: 7;
+}
+
+.seat.thanking > .bubble:not(.thanks) {
+  visibility: hidden;
+}
+
+.bubble.thanks {
+  width: 92px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 7;
+}
+
+@media (max-width: 700px) {
+  .office .walker {
+    width: 48px;
+    z-index: 5;
+  }
+
+  .office .bubble.thanks {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% - 2px);
+    width: 74px;
+    margin: 0;
+    padding: 3px 4px;
+    font-size: 11px;
+    line-height: 1.2;
+    transform: translateX(-50%);
+    -webkit-line-clamp: 1;
+  }
+
+  .office .candy-pop {
+    position: absolute;
+    font-size: 18px;
   }
 }
