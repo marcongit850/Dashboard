@@ -10,7 +10,7 @@ Team HQ is a private dashboard for Marc's bot team. It shows who is typing, who 
 - Domain: the `workers.dev` subdomain only (`workers_dev: true`)
 - No custom domain and no route patterns
 - Static files live in `public/` and are served with Workers static assets (`ASSETS`)
-- HTML is rendered by the Worker. CSS, the office sprite, and the favicon are static assets
+- HTML is rendered by the Worker. CSS and the favicon are static assets. The shared office is original SVG drawn in the page
 
 Cloudflare Access can sit in front of the hostname later. Until `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` are both set, the Worker allows the request and shows "Login not enabled yet".
 

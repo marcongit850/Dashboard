@@ -1,6 +1,6 @@
 import { COPY } from "./copy";
 import { escapeHtml } from "./html";
-import { deskSprite } from "./sprite";
+import { characterSvg, roomSvg, SEATS } from "./office";
 import { type BotCard, type DashboardModel, type FeedItem, type NeedItem } from "./state";
 import { formatCt } from "./time";
 
@@ -54,18 +54,18 @@ ${main}
 </html>`;
 }
 
-function deskCard(card: BotCard, demo: boolean, linked: boolean): string {
+function seat(card: BotCard, demo: boolean, linked: boolean, slot?: { x: string; y: string; z: number }): string {
   const pose = card.busy ? "busy" : "idle";
   const alert = card.attention ? " alert" : "";
-  const bubble = card.bubble
-    ? `<p class="bubble">${escapeHtml(card.bubble)}</p>`
-    : `<p class="bubble spacer" aria-hidden="true"></p>`;
+  const bubble = card.bubble ? `<p class="bubble">${escapeHtml(card.bubble)}</p>` : "";
   const bang = card.attention ? `<span class="bang"><span class="sr">${COPY.needsMarc}</span>!</span>` : "";
-  const scene = `<div class="scene">${deskSprite(card.look, card.busy ? "type" : "lean")}${bang}</div>`;
+  const actor = `<span class="actor">${characterSvg(card.look, card.busy ? "type" : "lean")}${bang}</span>`;
   const tag = `<span class="tag"><span class="dot" aria-hidden="true"></span>${escapeHtml(card.name)}</span>`;
-  const inner = `${bubble}${scene}${tag}`;
-  const body = linked ? `<a href="${href(`/bot/${card.slug}`, demo)}">${inner}</a>` : inner;
-  return `<article class="desk ${pose}${alert}">${body}</article>`;
+  const label = card.bubble ? `${card.name}, ${card.statusLine}, ${card.bubble}` : `${card.name}, ${card.statusLine}`;
+  const place = slot ? ` style="--x:${slot.x};--y:${slot.y};--z:${slot.z}"` : "";
+  const inner = `${bubble}${actor}${tag}`;
+  if (!linked) return `<div class="seat portrait ${pose}${alert}"${place}>${inner}</div>`;
+  return `<a class="seat ${pose}${alert}"${place} href="${href(`/bot/${card.slug}`, demo)}" aria-label="${escapeHtml(label)}">${inner}</a>`;
 }
 
 function eventList(items: FeedItem[], empty: string, className: string): string {
@@ -115,22 +115,18 @@ function weekChart(days: { label: string; count: number }[]): string {
 }
 
 export function renderHome(model: DashboardModel): string {
-  const desks = model.bots.map((bot) => deskCard(bot, model.demo, true)).join("");
+  const seats = model.bots.map((bot, index) => seat(bot, model.demo, true, SEATS[index])).join("");
   const roster = `<ul class="roster">${model.bots.map((bot) => {
     const pose = bot.busy ? "on" : "off";
     const alert = bot.attention ? " alert" : "";
     return `<li class="${pose}${alert}"><a href="${href(`/bot/${bot.slug}`, model.demo)}">${escapeHtml(bot.name)}</a><p><span class="k">${COPY.workingNow}:</span> ${escapeHtml(bot.workingNow)}</p><p><span class="k">${COPY.lastFinished}:</span> ${escapeHtml(bot.finishedLine)}</p></li>`;
   }).join("")}</ul>`;
   const main = `<section id="overview">
-    <div class="banner">
-      <img class="banner-art" src="/sprites.svg" alt="" width="220" height="128">
-      <div>
-        <h2>${COPY.overview}</h2>
-        <p>${COPY.floor}</p>
-        <p class="legend">${COPY.legend}</p>
-      </div>
-    </div>
-    <div class="desks">${desks}</div>
+    <h2>${COPY.overview}</h2>
+    <p>${COPY.floor}</p>
+    <p class="legend">${COPY.legend}</p>
+    <p class="scroll-hint">${COPY.officeHint}</p>
+    <div class="office-scroll"><div class="office">${roomSvg()}${seats}</div></div>
   </section>
   <section id="posts">
     <h2>${COPY.posts}</h2>
@@ -158,7 +154,7 @@ export function renderBot(model: DashboardModel, card: BotCard): string {
     : `<p class="empty">${COPY.noReports}</p>`;
   const main = `<p class="back"><a href="${href("/", model.demo)}">${COPY.back}</a></p>
   <div class="bot-hero">
-    ${deskCard(card, model.demo, false)}
+    ${seat(card, model.demo, false)}
     <div>
       <h2>${escapeHtml(card.name)}</h2>
       <p class="posture">${escapeHtml(card.statusLine)}</p>

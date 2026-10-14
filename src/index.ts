@@ -25,7 +25,7 @@ function text(body: string, status: number, extra: HeadersInit = {}): Response {
 
 function assetRequest(url: URL, request: Request): Request | null {
   if (url.pathname === "/favicon.ico") return new Request(new URL("/favicon.svg", url.origin), request);
-  if (url.pathname === "/hq.css" || url.pathname === "/sprites.svg" || url.pathname === "/favicon.svg") return request;
+  if (url.pathname === "/hq.css" || url.pathname === "/favicon.svg") return request;
   return null;
 }
 

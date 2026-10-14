@@ -63,7 +63,11 @@ describe("dash-free copy", () => {
     expect(html).toContain('id="overview"');
     expect(html).toContain('id="posts"');
     expect(html).toContain('id="team"');
-    expect(html.match(/class="desk /g)).toHaveLength(13);
+    expect(html.match(/class="seat /g)).toHaveLength(13);
+    expect(html).toContain('class="office"');
+    expect(html).not.toContain('class="pixel"');
+    expect(html).toContain('href="/bot/chief?demo=1"');
+    expect(html).toContain(COPY.officeHint);
     expect(html).toContain('class="bang"');
     expect(html).toContain("Beach flags are up");
     expect(html).toContain("Budget draft");
@@ -106,7 +110,7 @@ describe("dash-free copy", () => {
     expect(html).toContain(COPY.nothingFinished);
     expect(html).toContain(COPY.postsOff);
     expect(html).toContain(COPY.githubOff);
-    expect(html.match(/class="desk idle/g)).toHaveLength(13);
+    expect(html.match(/class="seat idle/g)).toHaveLength(13);
     const missing = renderMissing(page, true);
     assertClean(missing);
     expect(missing).toContain(COPY.noBot);
