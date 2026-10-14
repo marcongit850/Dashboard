@@ -13,7 +13,7 @@ Team HQ is a private dashboard for Marc's bot team. It shows who is typing, who 
   - `whatshappeningnetwork.com/dash`
   - `whatshappeningnetwork.com/dash/*`
 - `BASE_PATH` is `/dash`. Pages, links, assets, login, logout, and redirects all use that prefix. An empty `BASE_PATH` serves at the host root. A request to `/` on `workers.dev` redirects to `/dash`
-- Static files live in `public/` and are served with Workers static assets (`ASSETS`). The browser asks for `/dash/hq.css` and `/dash/favicon.svg`. The Worker strips the prefix before reading the asset
+- Static files live in `public/` and are served with Workers static assets (`ASSETS`). The browser asks for `/dash/hq.css`, `/dash/favicon.svg`, `/dash/candy.js`, and the candy visitor images. The Worker strips the prefix before reading the asset. `candy.js` only animates the visitor. It does not fetch, poll, or refresh the page
 - HTML is rendered by the Worker. The shared office is original SVG drawn in the page. At 700px and narrower the same characters sit in a 4-column grid, name tags stay readable, speech bubbles clamp to two lines, and the header nav stays on one row. Posts, Needs you, and the feed stack full width. Wider windows keep the wide office scene
 
 `whatshappeningnetwork.com` and `www.whatshappeningnetwork.com` are custom domains on the `whatshappening` Worker. The zone has no other Workers Routes. A route runs before that custom domain for a matching path, so `/dash` can belong to this Worker while the rest of the site stays put. `/dash` on the apex host was a 404, so the route does not replace a live page. The pattern is `/dash` and `/dash/*`, not `dash*`, because `dash*` would also take paths such as `/dashboard` away from the existing site. `www` is not routed. `www.whatshappeningnetwork.com/dash` still hits the `whatshappening` Worker.
@@ -71,7 +71,7 @@ Sheet URLs are vars, so anyone who can read the Worker config can see them. Do n
 
 - No cron triggers in config, and none should be added in the dashboard
 - No Workers AI and no other model calls
-- The browser has no script, no polling, and no auto refresh
+- The office page loads one same-origin script so a visitor can walk the floor and share candy. That script does not fetch, poll, or refresh. Other pages have no script
 - Upstream reads happen only when someone opens a page
 - Those reads use the Cache API (`caches.default`) with `max-age=300` (about 5 minutes)
 - The HTML response is `private, no-store`. Only the sheet and GitHub bodies are cached
