@@ -164,4 +164,18 @@ describe("dash-free copy", () => {
     expect(config).not.toContain("POSTLOG_CSV_URLS");
     expect(config).not.toContain("SAVENELLO_CSV_URL");
   });
+
+  it("keeps a wide office on desktop and a phone grid under 700px", () => {
+    const css = readFileSync("public/hq.css", "utf8");
+    const desktop = css.split("@media (max-width: 700px)")[0];
+    expect(desktop).toContain("min-width: 1080px");
+    expect(desktop).toContain("overflow-x: auto");
+    expect(css).toContain("@media (max-width: 700px)");
+    const phone = css.split("@media (max-width: 700px)")[1];
+    expect(phone).toContain("repeat(4, minmax(0, 1fr))");
+    expect(phone).toContain("min-width: 0");
+    expect(phone).toContain("-webkit-line-clamp: 2");
+    expect(phone).toContain("flex-wrap: nowrap");
+    expect(phone).toContain("grid-template-columns: 1fr");
+  });
 });
