@@ -417,6 +417,33 @@ section > p {
   padding-top: 8px;
 }
 
+.needs li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.need-copy { min-width: 0; }
+
+.clear-form { margin: 0; flex: none; }
+
+.clear-form button {
+  border: 2px solid var(--gold);
+  background: #241c0c;
+  color: var(--gold);
+  font: inherit;
+  font-size: 14px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.clear-form button:hover,
+.clear-form button:focus-visible {
+  background: var(--gold);
+  color: #241c0c;
+}
+
 .feed li:first-child,
 .needs li:first-child,
 .history li:first-child,

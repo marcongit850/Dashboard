@@ -76,6 +76,7 @@ describe("base path", () => {
     expect(safeNext("/dash", "//evil.test", "http://example.com")).toBe("/dash");
     expect(safeNext("/dash", "/docs", "http://example.com")).toBe("/dash");
     expect(safeNext("/dash", "/dash/login", "http://example.com")).toBe("/dash");
+    expect(safeNext("/dash", "/dash/clear", "http://example.com")).toBe("/dash");
     expect(safeNext("/dash", "/dash/docs?demo=1#team", "http://example.com")).toBe("/dash/docs?demo=1#team");
 
     const page = buildModel(buildDemoRaw(NOW), NOW, { demo: true, loginEnabled: true, basePath: "/dash" });

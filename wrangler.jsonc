@@ -29,6 +29,11 @@
     "binding": "ASSETS",
     "run_worker_first": true
   },
+  // Namespace title: dashboard-DISMISSALS. It must exist in this account before deploy.
+  // Local wrangler dev stores these keys on disk and does not write the remote namespace.
+  "kv_namespaces": [
+    { "binding": "DISMISSALS", "id": "1e0c1227633e4277b77ec6d0245641ec" }
+  ],
   "vars": {
     // Team HQ Log workbook, posts tab.
     // Columns: posted_at_ct, bot, site, platform, account, status, topic, post_url, reach, clicks, signups, notes.
