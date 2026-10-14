@@ -1,6 +1,7 @@
 import "./secrets";
 import { authorize } from "./access";
 import { COPY } from "./copy";
+import { attentionRows, loadDismissals, parseClearForm, sameOrigin, saveDismissal } from "./dismiss";
 import { buildDemoRaw } from "./demo";
 import {
   clearFailures,
@@ -25,7 +26,7 @@ const HTML: HeadersInit = {
   "content-type": "text/html; charset=utf-8",
   "cache-control": "private, no-store",
   "x-content-type-options": "nosniff",
-  "referrer-policy": "no-referrer",
+  "referrer-policy": "same-origin",
   "content-security-policy": "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; script-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   "x-frame-options": "DENY",
 };
@@ -70,7 +71,7 @@ export default {
     if (hit === "out") return text(COPY.notHere, 404);
 
     const logical = logicalPath(url.pathname, base);
-    const postOk = request.method === "POST" && (logical === "/login" || logical === "/logout");
+    const postOk = request.method === "POST" && (logical === "/login" || logical === "/logout" || logical === "/clear");
     if (request.method !== "GET" && request.method !== "HEAD" && !postOk) {
       return text(COPY.methodNotAllowed, 405, { allow: "GET, HEAD, POST" });
     }
@@ -114,11 +115,14 @@ export default {
       return redirect(login.toString(), 302);
     }
 
+    if (logical === "/clear") return submitClear(request, env, url, base);
+
     const demo = url.searchParams.get("demo") === "1";
     const now = new Date();
     try {
       const raw = demo ? buildDemoRaw(now) : await loadRaw(env, ctx);
-      const model = buildModel(raw, now, { demo, loginEnabled: auth.loginEnabled, basePath: base, passwordGate: true });
+      const dismissed = await loadDismissals(env.DISMISSALS, attentionRows(raw.statuses));
+      const model = buildModel(raw, now, { demo, loginEnabled: auth.loginEnabled, basePath: base, passwordGate: true, dismissed });
       if (logical === "/") {
         console.log(JSON.stringify({ event: "page", path: withBase(base, "/"), demo, ms: Date.now() - started, notes: model.notes.length }));
         return html(renderHome(model));
@@ -171,4 +175,31 @@ async function submitLogin(request: Request, env: Env, url: URL, base: string, s
   const next = new URL(safeNext(base, params.get("next"), url.origin), url.origin).toString();
   console.log(JSON.stringify({ event: "login_ok" }));
   return redirect(next, 303, { "set-cookie": sessionCookie(token, base) });
+}
+
+async function submitClear(request: Request, env: Env, url: URL, base: string): Promise<Response> {
+  if (request.method !== "POST") return text(COPY.methodNotAllowed, 405, { allow: "POST" });
+  if (!sameOrigin(request)) {
+    console.log(JSON.stringify({ event: "dismiss_origin" }));
+    return text(COPY.forbidden, 403);
+  }
+  let body = "";
+  try {
+    body = await request.text();
+  } catch {
+    body = "";
+  }
+  if (body.length > 2048) body = "";
+  const parsed = parseClearForm(body);
+  if (!parsed) {
+    console.log(JSON.stringify({ event: "dismiss_bad" }));
+    return text(COPY.dismissFailed, 400);
+  }
+  const saved = await saveDismissal(env.DISMISSALS, parsed.botId, parsed.at);
+  if (saved === "missing") return text(COPY.dismissalsOff, 503);
+  if (saved === "failed") return text(COPY.dismissFailed, 503);
+  const params = new URLSearchParams(body);
+  const next = new URL(safeNext(base, params.get("next"), url.origin), url.origin);
+  console.log(JSON.stringify({ event: "dismiss", bot: parsed.botId }));
+  return redirect(next.toString(), 303);
 }

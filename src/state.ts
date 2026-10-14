@@ -12,12 +12,13 @@ import {
   statusEvent,
   agePhrase,
 } from "./copy";
+import { clearTarget, dismissalKey, type ClearTarget } from "./dismiss";
 import { safeUrl } from "./html";
 import { formatCt, startOfWeekCt, TWO_HOURS_MS, DAY_MS, WEEKDAY_LABELS, weekDayIndex, withinHours } from "./time";
 import type { Commit, DocLink, Post, Pull, RawData, StatusRow } from "./types";
 
 export type FeedItem = { at: Date; text: string; href: string };
-export type NeedItem = { title: string; detail: string; href: string };
+export type NeedItem = { title: string; detail: string; href: string; clear: ClearTarget | null };
 export type HistoryItem = { at: Date; text: string; href: string };
 export type ReportLink = { label: string; href: string };
 
@@ -31,6 +32,7 @@ export type BotCard = {
   workingNow: string;
   finishedLine: string;
   statusLine: string;
+  clear: ClearTarget | null;
   job: readonly string[];
   look: Look;
   history: HistoryItem[];
@@ -67,7 +69,7 @@ function latestRow(rows: StatusRow[], state?: StatusRow["state"]): StatusRow | n
 export function buildModel(
   data: RawData,
   now: Date,
-  flags: { demo: boolean; loginEnabled: boolean; basePath?: string; passwordGate?: boolean },
+  flags: { demo: boolean; loginEnabled: boolean; basePath?: string; passwordGate?: boolean; dismissed?: ReadonlySet<string> },
 ): DashboardModel {
   const feed: FeedItem[] = [];
   const botNeeds: { at: number; item: NeedItem }[] = [];
@@ -82,7 +84,10 @@ export function buildModel(
       (latest?.state === "started" || latest?.state === "working") &&
       withinHours(latest.at, now, TWO_HOURS_MS);
     const busy = typing;
-    const attention = latest?.state === "blocked" || latest?.needsMarc === true;
+    const marked = latest != null && (latest.state === "blocked" || latest.needsMarc === true);
+    const dismissed = latest != null && marked && flags.dismissed?.has(dismissalKey(bot.id, latest.at)) === true;
+    const attention = marked && !dismissed;
+    const clear = latest != null && attention ? clearTarget(bot.id, latest.at) : null;
     const bubble = busy ? latest?.task || COPY.workingFallback : "";
     const workingNow = busy
       ? bubble
@@ -149,13 +154,14 @@ export function buildModel(
         href: safeUrl(commit.url),
       });
     }
-    if (latest && (latest.state === "blocked" || latest.needsMarc)) {
+    if (attention && latest) {
       botNeeds.push({
         at: latest.at.getTime(),
         item: {
           title: needBotTitle(bot.display, latest.state === "blocked", latest.needsMarc),
           detail: latest.task ? `${latest.task}, ${formatCt(latest.at)}` : formatCt(latest.at),
           href: safeUrl(latest.link),
+          clear,
         },
       });
     }
@@ -168,7 +174,8 @@ export function buildModel(
       bubble: busy ? bubble : "",
       workingNow,
       finishedLine: finished ? finishedLine(finished.task, formatCt(finished.at)) : COPY.nothingFinished,
-      statusLine: postureLine(busy, latest?.state === "blocked", latest?.needsMarc === true),
+      statusLine: postureLine(busy, latest?.state === "blocked", latest?.needsMarc === true && !dismissed),
+      clear,
       job: jobFor(bot.id),
       look: bot.look,
       history,
@@ -187,6 +194,7 @@ export function buildModel(
         title: pull.title,
         detail: `${pull.repo}, ${agePhrase(pull.createdAt, now)}${owner ? `, ${owner.display}` : ""}`,
         href: safeUrl(pull.url),
+        clear: null,
       },
     });
   }

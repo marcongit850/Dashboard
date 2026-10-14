@@ -60,6 +60,7 @@ export function safeNext(base: string, raw: string | null, origin: string): stri
   if (base && path !== base && !path.startsWith(`${base}/`)) return home;
   const login = withBase(base, "/login");
   const logout = withBase(base, "/logout");
-  if (path === login || path === logout) return home;
+  const clear = withBase(base, "/clear");
+  if (path === login || path === logout || path === clear) return home;
   return `${url.pathname}${url.search}${url.hash}`;
 }

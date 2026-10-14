@@ -76,6 +76,7 @@ describe("base path", () => {
     expect(safeNext("/dash", "//evil.test", "http://example.com")).toBe("/dash");
     expect(safeNext("/dash", "/docs", "http://example.com")).toBe("/dash");
     expect(safeNext("/dash", "/dash/login", "http://example.com")).toBe("/dash");
+    expect(safeNext("/dash", "/dash/clear", "http://example.com")).toBe("/dash");
     expect(safeNext("/dash", "/dash/docs?demo=1#team", "http://example.com")).toBe("/dash/docs?demo=1#team");
 
     const page = buildModel(buildDemoRaw(NOW), NOW, { demo: true, loginEnabled: true, basePath: "/dash" });
@@ -199,6 +200,7 @@ describe("password gate", () => {
       headers: { cookie: cookiePair(good) },
     }), env, ctx);
     expect(office.status).toBe(200);
+    expect(office.headers.get("referrer-policy")).toBe("same-origin");
     const officeHtml = await office.text();
     expect(officeHtml.match(/class="seat /g)).toHaveLength(13);
     expect(officeHtml).toContain('href="/dash/hq.css"');

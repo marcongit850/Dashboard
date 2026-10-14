@@ -153,6 +153,8 @@ describe("dash-free copy", () => {
     expect(config).toContain("whatshappeningnetwork.com/dash/*");
     expect(config).not.toMatch(/dash\*/);
     expect(config).toContain('"BASE_PATH": "/dash"');
+    expect(config).toContain('"binding": "DISMISSALS"');
+    expect(config).toContain("1e0c1227633e4277b77ec6d0245641ec");
     expect(config).not.toContain("GITHUB_TOKEN");
     expect(config).not.toContain("DASH_PASSWORD");
     expect(config).not.toContain("DASH_COOKIE_SECRET");

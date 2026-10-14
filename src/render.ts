@@ -1,9 +1,10 @@
 import { COPY } from "./copy";
+import type { ClearTarget } from "./dismiss";
 import { groupDocs, handbookFor, otherDocsFor } from "./docs";
 import { escapeHtml } from "./html";
 import { characterSvg, roomSvg } from "./office";
 import { withBase } from "./paths";
-import { type BotCard, type DashboardModel, type FeedItem, type NeedItem } from "./state";
+import { type BotCard, type DashboardModel, type FeedItem } from "./state";
 import type { DocLink } from "./types";
 import { formatCt } from "./time";
 
@@ -95,13 +96,23 @@ function eventList(items: FeedItem[], empty: string, className: string): string 
   }).join("")}</ol>`;
 }
 
-function needsList(items: NeedItem[]): string {
-  if (!items.length) return `<p class="empty">${COPY.nothingWaiting}</p>`;
-  return `<ul class="needs">${items.map((item) => {
+function clearForm(base: string, demo: boolean, nextPath: string, target: ClearTarget): string {
+  return `<form class="clear-form" method="post" action="${escapeHtml(withBase(base, "/clear"))}">
+    <input type="hidden" name="bot" value="${escapeHtml(target.botId)}">
+    <input type="hidden" name="at" value="${escapeHtml(target.at)}">
+    <input type="hidden" name="next" value="${escapeHtml(href(base, nextPath, demo))}">
+    <button type="submit">${COPY.clear}</button>
+  </form>`;
+}
+
+function needsList(model: DashboardModel): string {
+  if (!model.needs.length) return `<p class="empty">${COPY.nothingWaiting}</p>`;
+  return `<ul class="needs">${model.needs.map((item) => {
     const title = item.href
       ? `<a href="${escapeHtml(item.href)}" rel="noreferrer noopener">${escapeHtml(item.title)}</a>`
       : `<p>${escapeHtml(item.title)}</p>`;
-    return `<li>${title}<p>${escapeHtml(item.detail)}</p></li>`;
+    const button = item.clear ? clearForm(model.basePath, model.demo, "/", item.clear) : "";
+    return `<li><div class="need-copy">${title}<p>${escapeHtml(item.detail)}</p></div>${button}</li>`;
   }).join("")}</ul>`;
 }
 
@@ -151,7 +162,7 @@ export function renderHome(model: DashboardModel): string {
     <div class="panels">
       <article class="panel feed-panel"><h3>${COPY.liveFeed}</h3>${eventList(model.feed, COPY.noActivity, "feed")}</article>
       <article class="panel chart-panel"><h3>${COPY.postsThisWeek}</h3>${weekChart(model.week)}</article>
-      <article class="panel needs-panel"><h3>${COPY.needsYou}</h3>${needsList(model.needs)}</article>
+      <article class="panel needs-panel"><h3>${COPY.needsYou}</h3>${needsList(model)}</article>
     </div>
   </section>
   <section id="team">
@@ -179,6 +190,7 @@ export function renderBot(model: DashboardModel, card: BotCard): string {
       <p class="posture">${escapeHtml(card.statusLine)}</p>
       <p><span class="k">${COPY.workingNow}:</span> ${escapeHtml(card.workingNow)}</p>
       <p><span class="k">${COPY.lastFinished}:</span> ${escapeHtml(card.finishedLine)}</p>
+      ${card.clear ? clearForm(model.basePath, model.demo, `/bot/${card.slug}`, card.clear) : ""}
     </div>
   </div>
   <section class="job">
