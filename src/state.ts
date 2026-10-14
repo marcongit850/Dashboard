@@ -1,4 +1,5 @@
 import { BOTS, botById, type Look } from "./bots";
+import { jobFor } from "./jobs";
 import { normalizeBase } from "./paths";
 import {
   commitEvent,
@@ -30,6 +31,7 @@ export type BotCard = {
   workingNow: string;
   finishedLine: string;
   statusLine: string;
+  job: readonly string[];
   look: Look;
   history: HistoryItem[];
   reports: ReportLink[];
@@ -179,6 +181,7 @@ export function buildModel(
       workingNow,
       finishedLine: finished ? finishedLine(finished.task, formatCt(finished.at)) : COPY.nothingFinished,
       statusLine: postureLine(busy, latest?.state === "blocked", latest?.needsMarc === true),
+      job: jobFor(bot.id),
       look: bot.look,
       history,
       reports,

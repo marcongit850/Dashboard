@@ -181,6 +181,10 @@ export function renderBot(model: DashboardModel, card: BotCard): string {
       <p><span class="k">${COPY.lastFinished}:</span> ${escapeHtml(card.finishedLine)}</p>
     </div>
   </div>
+  <section class="job">
+    <h2>${COPY.jobResponsibilities}</h2>
+    ${card.job.map((sentence) => `<p>${escapeHtml(sentence)}</p>`).join("")}
+  </section>
   <section>
     <h2>${COPY.history}</h2>
     ${history}

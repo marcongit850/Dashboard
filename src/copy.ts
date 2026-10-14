@@ -31,6 +31,7 @@ export const COPY = {
   nothingFinished: "Nothing finished yet",
   workingNow: "Working now",
   lastFinished: "Last finished",
+  jobResponsibilities: "Job responsibilities",
   history: "History",
   reports: "Reports",
   noHistory: "No history yet.",
