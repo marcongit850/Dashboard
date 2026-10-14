@@ -92,6 +92,9 @@ describe("dash-free copy", () => {
     expect(html).toContain('src="/candy-arm-r.png"');
     expect(html).toContain('class="held-candy"');
     expect(html).toContain('src="/candy.js"');
+    expect(html).toContain('data-sound-toggle');
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).toContain('aria-label="Turn music on"');
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)/);
     expect(html).not.toMatch(/style="/);
     expect(html.toLowerCase()).not.toContain("http-equiv=\"refresh\"");
@@ -115,6 +118,7 @@ describe("dash-free copy", () => {
     expect(renderBot(page, bob)).not.toContain("ghp_");
     expect(renderBot(page, bob)).not.toContain("candy.js");
     expect(renderBot(page, bob)).not.toContain("data-candy-walker");
+    expect(renderBot(page, bob)).not.toContain("data-sound-toggle");
     const docsPage = renderDocs(page);
     assertClean(docsPage);
     expect(docsPage).toContain("Team handbooks folder");

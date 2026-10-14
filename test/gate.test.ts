@@ -219,6 +219,8 @@ describe("password gate", () => {
     expect(officeHtml).toContain('href="/dash/logout"');
     expect(officeHtml).toContain("at-12");
     expect(officeHtml).toContain('src="/dash/candy.js"');
+    expect(officeHtml).toContain('data-sound-toggle');
+    expect(officeHtml).toContain('aria-pressed="false"');
     expect(officeHtml).toContain('src="/dash/candy-torso.png"');
     expect(officeHtml).toContain('srcset="/dash/candy-torso.webp"');
     expect(officeHtml).toContain('src="/dash/candy-arm-l.png"');
@@ -244,6 +246,7 @@ describe("password gate", () => {
     expect(idleHtml).not.toContain(COPY.loginNotice);
     expect(idleHtml).toContain(COPY.leaning);
     expect(idleHtml).toContain('href="/dash?demo=1"');
+    expect(idleHtml).not.toContain("data-sound-toggle");
 
     const forged = await worker.fetch(new Request("http://example.com/dash?demo=1", {
       headers: { cookie: "hq_session=v1.1.bogus" },

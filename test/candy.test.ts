@@ -61,6 +61,8 @@ describe("candy visitor", () => {
     expect(css).toContain("leg-swing-l 0.4s");
     expect(css).toContain("translateY(-44px)");
     expect(css).toContain("candy-fade 1s");
+    expect(css).toContain("sound-toggle");
+    expect(css).toContain(".is-on .icon-on");
     expect(source).toContain("requestAnimationFrame");
     expect(source).toContain("Thanks!");
     expect(source).toContain("ArrowLeft");
@@ -68,6 +70,12 @@ describe("candy visitor", () => {
     expect(source).toContain("10000");
     expect(source).toContain("startHandoff");
     expect(source).toContain("tossed-candy");
+    expect(source).toContain("AudioContext");
+    expect(source).toContain("localStorage");
+    expect(source).toContain("hq-sound");
+    expect(source).toContain("playBoing");
+    expect(source).toContain("playPop");
+    expect(source).toContain("blur()");
     expect(source).not.toContain("fetch(");
     expect(source).not.toContain("setInterval");
     expect(source).not.toContain("setTimeout");

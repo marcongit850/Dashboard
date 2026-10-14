@@ -182,12 +182,59 @@ section > p {
   box-shadow: none;
 }
 
-.office-scroll {
+.office-frame {
+  position: relative;
   margin-top: 12px;
+}
+
+.office-scroll {
+  margin-top: 0;
   overflow-x: auto;
   border: 3px solid #1b2436;
   box-shadow: 4px 4px 0 #000;
   background: #e7d3b0;
+}
+
+.sound-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 12;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: #1b2436;
+  background: #fff7e8;
+  border: 3px solid #1b2436;
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 #000;
+  cursor: pointer;
+}
+
+.sound-toggle svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  fill: currentColor;
+}
+
+.sound-toggle .icon-on { display: none; }
+
+.sound-toggle.is-on .icon-off { display: none; }
+
+.sound-toggle.is-on .icon-on { display: block; }
+
+.sound-toggle:hover,
+.sound-toggle:focus-visible {
+  background: #ffe08a;
+}
+
+.sound-toggle:focus-visible {
+  outline: 3px solid #1b2436;
+  outline-offset: 2px;
 }
 
 .office {
@@ -678,9 +725,13 @@ footer {
     display: none;
   }
 
+  .office-frame {
+    margin-top: 8px;
+  }
+
   .office-scroll {
     overflow: hidden;
-    margin-top: 8px;
+    margin-top: 0;
   }
 
   .office {
@@ -1016,5 +1067,17 @@ footer {
   .office .candy-pop {
     position: absolute;
     font-size: 18px;
+  }
+
+  .sound-toggle {
+    top: 6px;
+    right: 6px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .sound-toggle svg {
+    width: 20px;
+    height: 20px;
   }
 }
