@@ -62,7 +62,8 @@ function officeInView(rect, viewHeight) {
   let shrugUntil = 0;
   let last = 0;
   const held = new Set();
-  const cooldown = new Map();
+  const autoReady = new Map();
+  const manualReady = new Map();
   const gifts = [];
 
   function phone() {
@@ -151,8 +152,10 @@ function officeInView(rect, viewHeight) {
   function give(seat, manual) {
     const now = performance.now();
     const key = seat.getAttribute("href") || seat.getAttribute("aria-label") || "seat";
-    if ((cooldown.get(key) || 0) > now) return false;
-    cooldown.set(key, now + (manual ? 2500 : 16000));
+    const gate = manual ? manualReady : autoReady;
+    if ((gate.get(key) || 0) > now) return false;
+    gate.set(key, now + (manual ? 900 : 16000));
+    if (manual) autoReady.set(key, now + 16000);
     seat.querySelectorAll(".thanks, .candy-pop").forEach((node) => node.remove());
     const pop = document.createElement("span");
     pop.className = "candy-pop";
