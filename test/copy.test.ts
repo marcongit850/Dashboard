@@ -84,8 +84,13 @@ describe("dash-free copy", () => {
     expect(html).toContain("Beach flags are up");
     expect(html).toContain("Budget draft");
     expect(html).toContain('data-candy-walker');
-    expect(html).toContain('src="/candy-girl.png"');
-    expect(html).toContain('srcset="/candy-girl.webp"');
+    expect(html).toContain('src="/candy-torso.png"');
+    expect(html).toContain('srcset="/candy-torso.webp"');
+    expect(html).toContain('src="/candy-leg-l.png"');
+    expect(html).toContain('src="/candy-leg-r.png"');
+    expect(html).toContain('src="/candy-arm-l.png"');
+    expect(html).toContain('src="/candy-arm-r.png"');
+    expect(html).toContain('class="held-candy"');
     expect(html).toContain('src="/candy.js"');
     expect(html).not.toMatch(/<script(?![^>]*\ssrc=)/);
     expect(html).not.toMatch(/style="/);

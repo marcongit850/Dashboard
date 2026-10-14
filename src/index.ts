@@ -44,7 +44,20 @@ function html(body: string, status = 200, extra: HeadersInit = {}): Response {
   return new Response(body, { status, headers });
 }
 
-const PUBLIC_FILES = new Set(["/hq.css", "/candy.js", "/candy-girl.png", "/candy-girl.webp"]);
+const PUBLIC_FILES = new Set([
+  "/hq.css",
+  "/candy.js",
+  "/candy-torso.png",
+  "/candy-torso.webp",
+  "/candy-leg-l.png",
+  "/candy-leg-l.webp",
+  "/candy-leg-r.png",
+  "/candy-leg-r.webp",
+  "/candy-arm-l.png",
+  "/candy-arm-l.webp",
+  "/candy-arm-r.png",
+  "/candy-arm-r.webp",
+]);
 
 function assetRequest(logical: string, url: URL): Request | null {
   if (logical === "/favicon.ico" || logical === "/favicon.svg") {

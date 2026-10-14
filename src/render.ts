@@ -63,15 +63,23 @@ ${tail}
 </html>`;
 }
 
+function candyPiece(base: string, name: string): string {
+  const png = withBase(base, `/${name}.png`);
+  const webp = withBase(base, `/${name}.webp`);
+  return `<picture><source srcset="${webp}" type="image/webp"><img class="sprite" src="${png}" alt="" width="180" height="465" decoding="async" draggable="false"></picture>`;
+}
+
 function candyVisitor(base: string): string {
-  const png = withBase(base, "/candy-girl.png");
-  const webp = withBase(base, "/candy-girl.webp");
+  const arm = (side: string) => `<div class="arm arm-${side}">${candyPiece(base, `candy-arm-${side}`)}<span class="pivot"></span><span class="hand-tip"></span><span class="held-candy" aria-hidden="true">🍬</span></div>`;
   return `<div class="walker depth-2 face-right" data-candy-walker>
     <p class="sr">A visitor with a candy tray walks the office. Arrow keys move her. Space jumps. Enter gives candy to a nearby bot.</p>
-    <div class="turn"><div class="motion"><picture>
-      <source srcset="${webp}" type="image/webp">
-      <img class="sprite" src="${png}" alt="" width="180" height="465" decoding="async" draggable="false">
-    </picture></div></div>
+    <div class="turn"><div class="motion">
+      <div class="leg leg-l">${candyPiece(base, "candy-leg-l")}</div>
+      <div class="leg leg-r">${candyPiece(base, "candy-leg-r")}</div>
+      <div class="torso">${candyPiece(base, "candy-torso")}</div>
+      ${arm("l")}
+      ${arm("r")}
+    </div></div>
   </div>`;
 }
 

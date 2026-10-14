@@ -45,22 +45,32 @@ describe("candy visitor", () => {
     expect(api.officeInView(null, 800)).toBe(false);
   });
 
-  it("ships a transparent sprite and a script that does not fetch", () => {
-    const png = readFileSync("public/candy-girl.png");
-    const webp = readFileSync("public/candy-girl.webp");
-    expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
-    expect(png[25]).toBe(6);
-    expect(png.length).toBeLessThan(200_000);
-    expect(webp.subarray(0, 4).toString("ascii")).toBe("RIFF");
-    expect(webp.subarray(8, 12).toString("ascii")).toBe("WEBP");
-    expect(webp.length).toBeLessThan(80_000);
+  it("ships transparent limb sprites and a script that does not fetch", () => {
+    const parts = ["candy-torso", "candy-leg-l", "candy-leg-r", "candy-arm-l", "candy-arm-r"];
+    for (const name of parts) {
+      const png = readFileSync(`public/${name}.png`);
+      const webp = readFileSync(`public/${name}.webp`);
+      expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+      expect(png[25]).toBe(6);
+      expect(png.length).toBeLessThan(200_000);
+      expect(webp.subarray(0, 4).toString("ascii")).toBe("RIFF");
+      expect(webp.subarray(8, 12).toString("ascii")).toBe("WEBP");
+      expect(webp.length).toBeLessThan(80_000);
+    }
+    const css = readFileSync("public/hq.css", "utf8");
+    expect(css).toContain("leg-swing-l 0.4s");
+    expect(css).toContain("translateY(-44px)");
+    expect(css).toContain("candy-fade 1s");
     expect(source).toContain("requestAnimationFrame");
     expect(source).toContain("Thanks!");
     expect(source).toContain("ArrowLeft");
     expect(source).toContain("preventDefault");
     expect(source).toContain("10000");
+    expect(source).toContain("startHandoff");
+    expect(source).toContain("tossed-candy");
     expect(source).not.toContain("fetch(");
     expect(source).not.toContain("setInterval");
+    expect(source).not.toContain("setTimeout");
     expect(source).not.toContain("XMLHttpRequest");
     expect(source).not.toContain("http-equiv");
   });
