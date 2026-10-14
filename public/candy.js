@@ -242,7 +242,7 @@ function officeInView(rect, viewHeight) {
   }
 
   function inwardAngle(arm) {
-    return arm.classList.contains("arm-l") ? 60 : -60;
+    return arm.classList.contains("arm-l") ? -36 : 36;
   }
 
   function placeToss(toss, now) {
