@@ -112,27 +112,47 @@ function productPage(state = {}) {
 
   .mhd-hero {
     position: relative;
-    color: #fff;
-    background: #0b2748 url("/tango-mar-boardwalk.png") center 42% / cover no-repeat;
+    color: var(--navy);
+    background: #d7ecf8 url("/mhd/hero.jpg") center / cover no-repeat;
     isolation: isolate;
   }
   .mhd-hero::before {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(100deg, rgba(5,16,36,.66) 0%, rgba(5,16,36,.38) 46%, rgba(5,16,36,.14) 100%);
+    background: linear-gradient(90deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.72) 34%, rgba(255,255,255,.28) 58%, rgba(255,255,255,0) 78%);
     z-index: -1;
   }
+  .mhd-hero .mhd-kicker { color: #1d4fbe; }
   .mhd-hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
-    gap: 2.5rem 3rem;
-    align-items: center;
-    padding: 4.2rem 0 4.4rem;
+    grid-template-columns: minmax(0, 0.92fr) minmax(300px, 1.08fr);
+    gap: 1.5rem 2rem;
+    align-items: end;
+    padding: 3.1rem 0 2.2rem;
   }
-  .mhd-hero h1 { font-size: clamp(3rem, 5.4vw, 4.6rem); max-width: 11ch; color: #fff; }
-  .mhd-lead { margin-top: 1.1rem; max-width: 36rem; font-size: 1.22rem; line-height: 1.45; color: #f4f7fb; }
-  .mhd-hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.6rem; }
+  .mhd-hero-copy { max-width: 38rem; align-self: center; }
+  .mhd-hero h1 {
+    font-size: clamp(2.85rem, 5vw, 4.45rem);
+    line-height: 1.02;
+    letter-spacing: -0.034em;
+    color: #071a33;
+    max-width: 11em;
+  }
+  .mhd-hero h1 span { display: block; }
+  .mhd-hero .mhd-lead { margin-top: 1rem; max-width: 34rem; font-size: 1.24rem; line-height: 1.45; color: #1b334c; }
+  .mhd-hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .mhd-hero .mhd-btn.ghost {
+    background: #fff;
+    color: var(--navy);
+    border-color: #b7c9de;
+  }
+  .mhd-hero .mhd-btn.ghost:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .mhd-hero-copy .mhd-card { margin-top: 1.25rem; box-shadow: 0 16px 40px rgba(16, 42, 74, 0.16); }
+  .mhd-hero-stage { position: relative; min-height: 430px; align-self: end; }
+  .mhd-hero-stage .mhd-laptop { width: min(100%, 560px); }
+  .mhd-hero-stage .mhd-screen { min-height: 292px; }
+  .mhd-hero-stage .mhd-phone { width: 148px; left: 0; bottom: 0; }
   .mhd-card {
     background: #fff;
     color: var(--ink);
@@ -416,6 +436,8 @@ function productPage(state = {}) {
   @media (max-width: 980px) {
     .mhd-hero-grid, .mhd-show-grid, .mhd-how-grid, .mhd-cards, .mhd-steps, .mhd-grid { grid-template-columns: 1fr; }
     .mhd-hero h1, .mhd-show h2 { max-width: none; }
+    .mhd-hero-stage { min-height: 0; margin-top: 0.4rem; }
+    .mhd-hero::before { background: linear-gradient(180deg, rgba(255,255,255,.78) 0%, rgba(255,255,255,.42) 46%, rgba(255,255,255,.12) 100%); }
     .mhd-phone { position: relative; left: auto; bottom: auto; margin: -2.2rem 0 0 1rem; }
     .mhd-devices { min-height: 0; }
     .mhd-features-head { flex-direction: column; align-items: flex-start; }
@@ -426,7 +448,8 @@ function productPage(state = {}) {
     .mhd { font-size: 1.08rem; }
     .mhd-bar { align-items: flex-start; }
     .mhd-nav { width: 100%; margin-left: 0; }
-    .mhd-hero-grid { padding: 2.4rem 0 2.6rem; }
+    .mhd-hero-grid { padding: 2.2rem 0 1.6rem; }
+    .mhd-hero h1 { font-size: clamp(2.55rem, 11vw, 3.3rem); letter-spacing: -0.03em; }
     .mhd-hero-actions .mhd-btn, .mhd-card button.mhd-btn { width: 100%; }
     .mhd-metrics { grid-template-columns: 1fr; }
     .mhd-screen { grid-template-columns: 1fr; }
@@ -460,15 +483,14 @@ function productPage(state = {}) {
 
   <section class="mhd-hero">
     <div class="mhd-wrap mhd-hero-grid">
-      <div>
+      <div class="mhd-hero-copy">
         <p class="mhd-kicker">Simple. Secure. Built for HOAs.</p>
-        <h1>Your neighborhood. One connected place.</h1>
+        <h1><span>Your neighborhood.</span><span>One connected place.</span></h1>
         <p class="mhd-lead">Documents, dues, notices, and more. Everything your HOA needs in one secure portal.</p>
         <div class="mhd-hero-actions">
           <a class="mhd-btn" href="/demo">See the demo</a>
           <a class="mhd-btn ghost" href="/bring-this-to-your-hoa">Bring this to your HOA</a>
         </div>
-      </div>
       <form class="mhd-card" method="post" action="/neighborhood">
         <div class="mhd-card-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2 12 4.8l8 6.4"/><path d="M7 10.4V19h10v-8.6"/></svg>
@@ -484,6 +506,45 @@ function productPage(state = {}) {
           Secure password-free email sign-in
         </p>
       </form>
+      </div>
+      <div class="mhd-devices mhd-hero-stage" aria-hidden="true">
+        <div class="mhd-laptop">
+          <div class="mhd-screen">
+            <aside class="mhd-side">
+              <strong>Seaside Demo HOA</strong>
+              <span class="on">Dashboard</span>
+              <span>Documents</span>
+              <span>News</span>
+              <span>Calendar</span>
+              <span>Messages</span>
+              <span>Notices</span>
+            </aside>
+            <div class="mhd-app">
+              <h3>Welcome back, Riley Coast</h3>
+              <p class="who">Seaside Demo HOA, Lot 12</p>
+              <div class="mhd-metrics">
+                <div class="mhd-metric good"><span>Account balance</span><b>$300.00</b></div>
+                <div class="mhd-metric"><span>Open invoices</span><b>1</b></div>
+                <div class="mhd-metric"><span>Next meeting</span><b>Nov 12</b></div>
+              </div>
+              <div class="mhd-note-list">
+                <div class="mhd-note"><b>Sample storm watch.</b> Stay off the sample dock until the board posts an all clear.</div>
+                <div class="mhd-note"><b>Sample annual meeting.</b> Thursday, November 12, 2026, 6:00 p.m. at the clubhouse.</div>
+              </div>
+            </div>
+          </div>
+          <div class="mhd-base"></div>
+        </div>
+        <div class="mhd-phone">
+          <div class="mhd-phone-screen">
+            <strong>Riley Coast</strong>
+            <p class="who">Seaside Demo HOA</p>
+            <div class="mhd-metric good"><span>Balance</span><b>$300.00</b></div>
+            <div class="mhd-note"><b>Notices</b><br>Sample storm watch</div>
+            <div class="mhd-note"><b>Calendar</b><br>Nov 12 annual meeting</div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
