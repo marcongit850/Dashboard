@@ -11,7 +11,11 @@
   "workers_dev": true,
   "routes": [
     { "pattern": "whatshappeningnetwork.com/dash", "zone_name": "whatshappeningnetwork.com" },
-    { "pattern": "whatshappeningnetwork.com/dash/*", "zone_name": "whatshappeningnetwork.com" }
+    { "pattern": "whatshappeningnetwork.com/dash/*", "zone_name": "whatshappeningnetwork.com" },
+    { "pattern": "2911studio.com/dash", "zone_name": "2911studio.com" },
+    { "pattern": "2911studio.com/dash/*", "zone_name": "2911studio.com" },
+    { "pattern": "www.2911studio.com/dash", "zone_name": "2911studio.com" },
+    { "pattern": "www.2911studio.com/dash/*", "zone_name": "2911studio.com" }
   ],
   "observability": {
     "enabled": true,
