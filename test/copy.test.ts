@@ -170,8 +170,11 @@ describe("dash-free copy", () => {
     expect(config).not.toMatch(/"triggers"/);
     expect(config).not.toMatch(/custom_domain/);
     expect(config).toContain('"routes"');
-    expect(config).toContain("whatshappeningnetwork.com/dash");
-    expect(config).toContain("whatshappeningnetwork.com/dash/*");
+    expect(config).toContain("2911studio.com/dash");
+    expect(config).toContain("2911studio.com/dash/*");
+    expect(config).toContain("www.2911studio.com/dash");
+    expect(config).toContain("www.2911studio.com/dash/*");
+    expect(config).not.toContain("whatshappeningnetwork.com");
     expect(config).not.toMatch(/dash\*/);
     expect(config).toContain('"BASE_PATH": "/dash"');
     expect(config).toContain('"binding": "DISMISSALS"');
