@@ -6,12 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "account_id": "f1c59948520f1ec39473238b621c7e24",
   // workers.dev stays on. No schedule, and no custom domain for this Worker.
-  // Path routes only. The apex custom domain stays on the whatshappening Worker.
-  // These patterns run first for /dash and do not replace the rest of the site.
+  // Path routes on 2911studio.com only. Canonical live URL: https://2911studio.com/dash
   "workers_dev": true,
   "routes": [
-    { "pattern": "whatshappeningnetwork.com/dash", "zone_name": "whatshappeningnetwork.com" },
-    { "pattern": "whatshappeningnetwork.com/dash/*", "zone_name": "whatshappeningnetwork.com" },
     { "pattern": "2911studio.com/dash", "zone_name": "2911studio.com" },
     { "pattern": "2911studio.com/dash/*", "zone_name": "2911studio.com" },
     { "pattern": "www.2911studio.com/dash", "zone_name": "2911studio.com" },
