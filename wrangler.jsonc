@@ -8,11 +8,10 @@
   // workers.dev stays on. No schedule, and no custom domain for this Worker.
   // Path routes on 2911studio.com only. Canonical live URL: https://2911studio.com/dash
   "workers_dev": true,
+  // Use hostname/dash* route patterns (not separate slash-star segments); studio2911 custom domain otherwise wins /dash.
   "routes": [
-    { "pattern": "2911studio.com/dash", "zone_name": "2911studio.com" },
-    { "pattern": "2911studio.com/dash/*", "zone_name": "2911studio.com" },
-    { "pattern": "www.2911studio.com/dash", "zone_name": "2911studio.com" },
-    { "pattern": "www.2911studio.com/dash/*", "zone_name": "2911studio.com" }
+    { "pattern": "2911studio.com/dash*", "zone_name": "2911studio.com" },
+    { "pattern": "www.2911studio.com/dash*", "zone_name": "2911studio.com" }
   ],
   "observability": {
     "enabled": true,
